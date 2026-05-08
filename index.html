@@ -37,7 +37,6 @@
             z-index: 100; transition: opacity 0.05s ease-out;
         }
 
-        /* 極度壓縮的上方介面 */
         #top-ui {
             width: 100%; max-width: 600px; padding: 6px;
             display: flex; flex-direction: column; align-items: center;
@@ -73,7 +72,6 @@
         .hp-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.1s ease-out; }
         #enemy-hp-fill { background: #d50000; }
 
-        /* 極限微縮拉霸機 */
         #slot-machine-container {
             display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 180px;
             background: linear-gradient(to bottom, #555, #222);
@@ -253,24 +251,24 @@
         let particles = [], damageNumbers = [], slashes = [];
         function addVfx(x, y, type) {
             if (type === 'hit') {
-                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 200 + Math.random() * 80, alpha: 1, decay: 0.12, thickness: 25 });
-                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 150 + Math.random() * 60, alpha: 1, decay: 0.15, thickness: 12 });
-                particles.push({ x: x, y: y, type: 'spark', size: 15, growth: 25, alpha: 1, decay: 0.1, color: '#fff' });
-                for (let i = 0; i < 25; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30 - 5, gravity: 1.2, size: Math.random() * 10 + 5, color: currentMultiplier >= 5 ? '#ffeb3b' : '#fff', alpha: 1, decay: 0.04 + Math.random() * 0.04 }); }
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 180 + Math.random() * 50, alpha: 1, decay: 0.15, thickness: 4 });
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 120 + Math.random() * 40, alpha: 1, decay: 0.18, thickness: 1.5 });
+                particles.push({ x: x, y: y, type: 'spark', size: 5, growth: 10, alpha: 1, decay: 0.2, color: '#fff' });
+                for (let i = 0; i < 12; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 25, vy: (Math.random() - 0.5) * 25 - 5, gravity: 1.5, size: Math.random() * 6 + 3, color: currentMultiplier >= 5 ? '#ffeb3b' : '#fff', alpha: 1, decay: 0.05 + Math.random() * 0.05 }); }
             } else if (type === 'parry') {
-                particles.push({ x: x, y: y, type: 'spark', size: 20, growth: 30, alpha: 1, decay: 0.05, color: '#fff' });
-                particles.push({ x: x, y: y, type: 'shockwave', size: 30, color: '#00e676', alpha: 1, decay: 0.05, thickness: 15 });
-                for (let i = 0; i < 30; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 35, vy: (Math.random() - 0.5) * 35, gravity: 0.5, size: Math.random() * 12 + 4, color: '#b2ff59', alpha: 1, decay: 0.05 }); }
+                particles.push({ x: x, y: y, type: 'spark', size: 10, growth: 20, alpha: 1, decay: 0.08, color: '#fff' });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 30, color: '#00e676', alpha: 1, decay: 0.05, thickness: 8 });
+                for (let i = 0; i < 20; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, gravity: 0.5, size: Math.random() * 8 + 3, color: '#b2ff59', alpha: 1, decay: 0.05 }); }
             } else if (type === 'shield') {
-                particles.push({ x: x, y: y, type: 'shockwave', size: 40, color: '#ffb300', alpha: 1, decay: 0.04, thickness: 20 });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 40, color: '#ffb300', alpha: 1, decay: 0.04, thickness: 10 });
             } else if (type === 'death') {
-                particles.push({ x: x, y: y, type: 'spark', size: 50, growth: 100, alpha: 1, decay: 0.02, color: '#fff' });
-                particles.push({ x: x, y: y, type: 'shockwave', size: 50, color: '#d50000', alpha: 1, decay: 0.02, thickness: 30 });
-                for (let i = 0; i < 80; i++) {
+                particles.push({ x: x, y: y, type: 'spark', size: 20, growth: 50, alpha: 1, decay: 0.03, color: '#fff' });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 50, color: '#d50000', alpha: 1, decay: 0.02, thickness: 20 });
+                for (let i = 0; i < 60; i++) {
                     particles.push({ 
-                        x: x, y: y, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, 
-                        gravity: 0.8, size: Math.random() * 20 + 8, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
-                        alpha: 1, decay: 0.01 + Math.random() * 0.02 
+                        x: x, y: y, vx: (Math.random() - 0.5) * 70, vy: (Math.random() - 0.5) * 70, 
+                        gravity: 1, size: Math.random() * 15 + 5, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
+                        alpha: 1, decay: 0.02 + Math.random() * 0.02 
                     });
                 }
             }
@@ -395,7 +393,7 @@
                 playerHpBox.classList.remove('invincible');
             }
             
-            slotStatus.innerText = "倍率 x " + currentMultiplier;
+            slotStatus.innerText = "加成中";
             if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
         }
 

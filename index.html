@@ -38,11 +38,11 @@
         }
         .warning-btn:active { background: #444; transform: translateY(2px); box-shadow: 0 2px 5px rgba(0,0,0,0.8); }
 
-        .hit-stop { transform: scale(1.03); }
+        .hit-stop { transform: scale(1.02); }
 
-        @keyframes shake-micro { 0% {transform: translate(0px, 3px)} 50% {transform: translate(0px, -3px)} 100% {transform: translate(0px, 0px)} }
-        @keyframes shake-light { 0% { transform: translate(5px, 5px) } 25% { transform: translate(-4px, -3px) } 50% { transform: translate(3px, 6px) } 75% { transform: translate(-3px, 3px) } 100% { transform: translate(0px, 0px) } }
-        @keyframes shake-heavy { 0% { transform: translate(10px, 10px) rotate(2deg); } 25% { transform: translate(-12px, -8px) rotate(-2deg); } 50% { transform: translate(8px, 14px) rotate(3deg); } 75% { transform: translate(-14px, 6px) rotate(-3deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
+        @keyframes shake-micro { 0% {transform: translate(0px, 2px)} 50% {transform: translate(0px, -2px)} 100% {transform: translate(0px, 0px)} }
+        @keyframes shake-light { 0% { transform: translate(3px, 3px) } 25% { transform: translate(-2px, -2px) } 50% { transform: translate(2px, 4px) } 75% { transform: translate(-2px, 2px) } 100% { transform: translate(0px, 0px) } }
+        @keyframes shake-heavy { 0% { transform: translate(8px, 8px) rotate(2deg); } 25% { transform: translate(-10px, -6px) rotate(-2deg); } 50% { transform: translate(6px, 12px) rotate(3deg); } 75% { transform: translate(-12px, 5px) rotate(-3deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-micro { animation: shake-micro 0.1s ease-out; }
         .shake-light { animation: shake-light 0.15s ease-out; }
         .shake-heavy { animation: shake-heavy 0.3s ease-out; }
@@ -53,78 +53,79 @@
             z-index: 100; transition: opacity 0.05s ease-out;
         }
 
+        /* 頂部極簡 UI */
         #top-ui {
-            width: 100%; max-width: 600px; padding: 10px;
+            width: 100%; max-width: 600px; padding: 6px 10px;
             display: flex; flex-direction: column; align-items: center;
             z-index: 10; background-color: #1a1a1a;
-            border-bottom: 4px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            border-bottom: 2px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
         }
 
         #score-board {
-            display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;
+            display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px;
         }
         .score-box {
-            background: #111; padding: 5px 10px; border-radius: 4px; border: 2px solid #333;
-            text-align: center; flex: 1; margin: 0 5px; font-weight: 900; font-size: 12px; color: #888;
+            background: #111; padding: 2px 6px; border-radius: 4px; border: 1px solid #333;
+            text-align: center; flex: 1; margin: 0 4px; font-weight: 900; font-size: 10px; color: #888;
         }
         .score-val {
-            font-size: 20px; color: #fff; display: block; text-shadow: 0 2px 4px #000;
+            font-size: 14px; color: #fff; display: block; text-shadow: 0 2px 2px #000; margin-top: 2px;
         }
         .score-highlight { color: #00e5ff; }
 
-        .hp-container { display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px; }
+        .hp-container { display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px; }
         .hp-box { 
-            background: #222; padding: 8px; border-radius: 4px; 
-            border: 2px solid #444; border-bottom: 4px solid #111; 
-            text-align: center; flex: 1; margin: 0 5px; 
-            font-weight: 900; font-size: 14px;
+            background: #222; padding: 3px; border-radius: 4px; 
+            border: 2px solid #444; border-bottom: 3px solid #111; 
+            flex: 1; margin: 0 4px; 
         }
         
-        .hp-box.invincible { border-color: #ffb300; background: #4a3500; color: #ffeb3b; border-bottom-color: #2a1f00; }
+        .hp-box.invincible { border-color: #ffb300; background: #4a3500; border-bottom-color: #2a1f00; box-shadow: 0 0 10px rgba(255, 179, 0, 0.5); }
 
         @keyframes damageFlash { 0% { border-color: #ff1744; background: #8a0000; transform: scale(1.05) rotate(1deg); } 100% { border-color: #444; background: #222; transform: scale(1) rotate(0deg); } }
         .hp-box.damaged { animation: damageFlash 0.2s ease-out; }
         
-        .hp-bar { width: 100%; height: 14px; background: #000; border-radius: 2px; overflow: hidden; margin-top: 6px; border: 2px solid #111; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .hp-bar { width: 100%; height: 12px; background: #000; border-radius: 2px; overflow: hidden; border: 1px solid #111; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
         .hp-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.1s ease-out; }
         #enemy-hp-fill { background: #d50000; }
 
+        /* 微縮拉霸機 */
         #slot-machine-container {
-            display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 300px;
+            display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 160px;
             background: linear-gradient(to bottom, #555, #222);
-            border: 4px solid #111; border-top: 3px solid #777; border-bottom: 6px solid #000;
-            padding: 10px; border-radius: 8px;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.8); cursor: pointer;
+            border: 2px solid #111; border-top: 2px solid #777; border-bottom: 4px solid #000;
+            padding: 4px; border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.8); cursor: pointer;
         }
-        #slot-machine-container:active { transform: translateY(4px); box-shadow: 0 1px 3px rgba(0,0,0,0.8); border-bottom-width: 2px; margin-bottom: 4px; }
+        #slot-machine-container:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.8); border-bottom-width: 2px; margin-bottom: 2px; }
         
         .slots {
-            display: flex; gap: 10px; margin-bottom: 6px;
-            background: #0a0a0a; padding: 10px; border-radius: 6px;
-            border: 3px solid #111; border-top: 4px solid #000; border-bottom: 3px solid #333;
-            box-shadow: inset 0 5px 10px rgba(0,0,0,0.9); overflow: hidden;
+            display: flex; gap: 4px; margin-bottom: 4px;
+            background: #0a0a0a; padding: 4px; border-radius: 4px;
+            border: 2px solid #111; border-top: 2px solid #000; border-bottom: 2px solid #333;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.9); overflow: hidden;
         }
         
         .slot-item {
-            width: 45px; height: 45px; display: flex; justify-content: center; align-items: center;
+            width: 26px; height: 26px; display: flex; justify-content: center; align-items: center;
             background: linear-gradient(to bottom, #e0e0e0, #999); 
-            border-radius: 4px; border: 2px solid #222; border-bottom: 4px solid #555;
-            box-shadow: 0 3px 5px rgba(0,0,0,0.5);
-            font-size: 28px; font-weight: 900; font-family: 'Arial Black', sans-serif; color: #111;
+            border-radius: 2px; border: 1px solid #222; border-bottom: 2px solid #555;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            font-size: 14px; font-weight: 900; font-family: 'Arial Black', sans-serif; color: #111;
             text-shadow: 0 1px 0 rgba(255,255,255,0.5);
         }
 
-        .slot-item.spinning { transform: scaleY(1.8); filter: blur(3px); color: #444; background: linear-gradient(to bottom, #999, #666); }
-        @keyframes lock-in-pop { 0% { transform: scale(1.3) translateY(5px); filter: brightness(1.5); } 50% { transform: scale(0.9) translateY(-2px); } 100% { transform: scale(1) translateY(0); filter: brightness(1); } }
+        .slot-item.spinning { transform: scaleY(1.8); filter: blur(2px); color: #444; background: linear-gradient(to bottom, #999, #666); }
+        @keyframes lock-in-pop { 0% { transform: scale(1.3) translateY(2px); filter: brightness(1.5); } 50% { transform: scale(0.9) translateY(-1px); } 100% { transform: scale(1) translateY(0); filter: brightness(1); } }
         .slot-item.locked { animation: lock-in-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes tension-shake { 0% { transform: translateY(-4px) scaleY(1.3); } 50% { transform: translateY(4px) scaleY(1.3); } 100% { transform: translateY(-4px) scaleY(1.3); } }
+        @keyframes tension-shake { 0% { transform: translateY(-2px) scaleY(1.3); } 50% { transform: translateY(2px) scaleY(1.3); } 100% { transform: translateY(-2px) scaleY(1.3); } }
         .slot-item.tension { animation: tension-shake 0.05s infinite; filter: blur(1px) brightness(0.8); color: #fff; background: #d50000; border-color: #ff1744; text-shadow: 0 0 10px #000; }
 
-        .slot-info { color: #ffb300; font-weight: 900; font-size: 14px; text-shadow: 0 2px 4px #000; text-align: center; width: 100%; background: #111; padding: 4px; border-radius: 4px; border: 2px solid #000; }
+        .slot-info { color: #ffb300; font-weight: 900; font-size: 10px; text-shadow: 0 1px 2px #000; text-align: center; width: 100%; background: #111; padding: 2px; border-radius: 2px; border: 1px solid #000; }
         .slot-info.highlight { color: #ff1744; background: #3a0000; }
-        .slot-chain-text { color: #00e5ff; font-size: 14px; margin-top: 6px; opacity: 0; font-weight: 900; text-shadow: 0 2px 2px #000; }
+        .slot-chain-text { color: #00e5ff; font-size: 9px; margin-top: 2px; opacity: 0; font-weight: 900; text-shadow: 0 1px 2px #000; }
 
-        #buff-bar-container { width: 100%; height: 8px; background: #000; border-radius: 2px; overflow: hidden; margin-top: 6px; opacity: 0; border: 2px solid #222; }
+        #buff-bar-container { width: 100%; height: 4px; background: #000; border-radius: 2px; overflow: hidden; margin-top: 2px; opacity: 0; border: 1px solid #222; }
         #buff-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ffb300, #ff5252); }
 
         #battle-area { flex-grow: 1; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; cursor: crosshair; }
@@ -162,13 +163,12 @@
                 </div>
             </div>
 
+            <!-- 移除了文字 只保留血條和狀態框 -->
             <div class="hp-container">
                 <div class="hp-box" id="player-hp-box">
-                    <div id="player-status-text">玩家生命</div>
                     <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
                 </div>
                 <div class="hp-box" id="enemy-hp-box">
-                    <div>敵人生命</div>
                     <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
                 </div>
             </div>
@@ -228,7 +228,6 @@
         const container = document.getElementById('game-container');
         const flashOverlay = document.getElementById('flash-overlay');
         const playerHpBox = document.getElementById('player-hp-box');
-        const playerStatusText = document.getElementById('player-status-text');
         const enemyHpBox = document.getElementById('enemy-hp-box');
         const playerHpFill = document.getElementById('player-hp-fill');
         const enemyHpFill = document.getElementById('enemy-hp-fill');
@@ -288,29 +287,33 @@
         let particles = [], damageNumbers = [], slashes = [];
         function addVfx(x, y, type) {
             if (type === 'hit') {
-                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 180 + Math.random() * 50, alpha: 1, decay: 0.12, thickness: 25 });
-                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 150 + Math.random() * 60, alpha: 1, decay: 0.15, thickness: 12 });
-                particles.push({ x: x, y: y, type: 'spark', size: 15, growth: 25, alpha: 1, decay: 0.1, color: '#fff' });
-                for (let i = 0; i < 25; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30 - 5, gravity: 1.2, size: Math.random() * 10 + 5, color: currentMultiplier >= 5 ? '#ffeb3b' : '#fff', alpha: 1, decay: 0.04 + Math.random() * 0.04 }); }
+                // 更銳利 更細 更快的刀光
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 150 + Math.random() * 50, alpha: 1, decay: 0.18, thickness: 3 });
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 100 + Math.random() * 50, alpha: 1, decay: 0.2, thickness: 1.5 });
+                // 中心爆點改小
+                particles.push({ x: x, y: y, type: 'spark', size: 4, growth: 8, alpha: 1, decay: 0.15, color: '#fff' });
+                // 碎片變小且重力加強
+                for (let i = 0; i < 15; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20 - 5, gravity: 1.5, size: Math.random() * 5 + 2, color: currentMultiplier >= 5 ? '#ffeb3b' : '#fff', alpha: 1, decay: 0.05 + Math.random() * 0.05 }); }
             } else if (type === 'parry') {
-                particles.push({ x: x, y: y, type: 'spark', size: 20, growth: 30, alpha: 1, decay: 0.05, color: '#fff' });
-                particles.push({ x: x, y: y, type: 'shockwave', size: 30, color: '#00e676', alpha: 1, decay: 0.05, thickness: 15 });
-                for (let i = 0; i < 30; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 35, vy: (Math.random() - 0.5) * 35, gravity: 0.5, size: Math.random() * 12 + 4, color: '#b2ff59', alpha: 1, decay: 0.05 }); }
+                particles.push({ x: x, y: y, type: 'spark', size: 8, growth: 15, alpha: 1, decay: 0.1, color: '#fff' });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 20, color: '#00e676', alpha: 1, decay: 0.08, thickness: 5 });
+                for (let i = 0; i < 20; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, gravity: 0.8, size: Math.random() * 6 + 2, color: '#b2ff59', alpha: 1, decay: 0.05 }); }
             } else if (type === 'shield') {
-                particles.push({ x: x, y: y, type: 'shockwave', size: 40, color: '#ffb300', alpha: 1, decay: 0.04, thickness: 20 });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 30, color: '#ffb300', alpha: 1, decay: 0.05, thickness: 8 });
             } else if (type === 'death') {
-                particles.push({ x: x, y: y, type: 'spark', size: 50, growth: 100, alpha: 1, decay: 0.02, color: '#fff' });
-                particles.push({ x: x, y: y, type: 'shockwave', size: 50, color: '#d50000', alpha: 1, decay: 0.02, thickness: 30 });
-                for (let i = 0; i < 80; i++) {
+                particles.push({ x: x, y: y, type: 'spark', size: 20, growth: 60, alpha: 1, decay: 0.03, color: '#fff' });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 40, color: '#d50000', alpha: 1, decay: 0.03, thickness: 15 });
+                for (let i = 0; i < 60; i++) {
                     particles.push({ 
-                        x: x, y: y, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, 
-                        gravity: 0.8, size: Math.random() * 20 + 8, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
-                        alpha: 1, decay: 0.01 + Math.random() * 0.02 
+                        x: x, y: y, vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50, 
+                        gravity: 1, size: Math.random() * 12 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
+                        alpha: 1, decay: 0.02 + Math.random() * 0.02 
                     });
                 }
             }
         }
 
+        // 傷害顏色分級
         function addDamageNumber(x, y, damage, multiplier) { 
             let rgb = '255, 255, 255';
             if (multiplier >= 20) rgb = '213, 0, 249'; 
@@ -322,7 +325,7 @@
             damageNumbers.push({ 
                 x: x + (Math.random() - 0.5) * 50, y: y - 20, damage: damage, 
                 rgb: rgb, vx: (Math.random() - 0.5) * 3, vy: -8 - Math.random() * 5, 
-                gravity: 0.6, alpha: 2, scale: multiplier >= 5 ? 1.8 : 1.2 
+                gravity: 0.6, alpha: 2, scale: multiplier >= 5 ? 1.6 : 1.1 
             }); 
         }
 
@@ -432,13 +435,11 @@
                 slotChainText.style.opacity = '1';
                 isInvincible = true;
                 playerHpBox.classList.add('invincible');
-                playerStatusText.innerText = "無敵狀態";
             } else { 
                 jackpotBonusChance = 0; 
                 slotChainText.style.opacity = '0';
                 isInvincible = false;
                 playerHpBox.classList.remove('invincible');
-                playerStatusText.innerText = "玩家生命";
             }
             
             slotStatus.innerText = "倍率 x " + currentMultiplier;
@@ -451,7 +452,7 @@
                 let remaining = buffEndTime - Date.now();
                 if (remaining <= 0) { 
                     clearInterval(buffInterval); currentMultiplier = 1; jackpotBonusChance = 0; 
-                    isInvincible = false; playerHpBox.classList.remove('invincible'); playerStatusText.innerText = "玩家生命";
+                    isInvincible = false; playerHpBox.classList.remove('invincible');
                     buffContainer.style.opacity = '0'; slotChainText.style.opacity = '0'; 
                     slotStatus.innerText = "加成結束 點擊重啟"; triggerShake('light'); 
                 } else {
@@ -464,7 +465,7 @@
         
         function clearBuffTimer() { 
             clearInterval(buffInterval); buffContainer.style.opacity = '0'; 
-            isInvincible = false; playerHpBox.classList.remove('invincible'); playerStatusText.innerText = "玩家生命";
+            isInvincible = false; playerHpBox.classList.remove('invincible');
         }
 
         function checkEnemyDeath() {

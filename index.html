@@ -300,7 +300,7 @@
                 for (let i = 0; i < 50; i++) {
                     particles.push({ 
                         x: x, y: y, vx: (Math.random() - 0.5) * 45, vy: (Math.random() - 0.5) * 45, 
-                        gravity: 1, size: Math.random() * 10 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
+                        gravity: 1, size: Math.random() * 12 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
                         alpha: 1, decay: 0.02 + Math.random() * 0.02 
                     });
                 }
@@ -327,7 +327,7 @@
             for (let i = slashes.length - 1; i >= 0; i--) { let s = slashes[i]; s.alpha -= s.decay; vfxCtx.save(); vfxCtx.translate(s.x, s.y); vfxCtx.rotate(s.angle); vfxCtx.beginPath(); vfxCtx.moveTo(-s.length/2, 0); vfxCtx.lineTo(s.length/2, 0); vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; vfxCtx.lineWidth = s.thickness * s.alpha; vfxCtx.stroke(); vfxCtx.restore(); if (s.alpha <= 0) slashes.splice(i, 1); }
             for (let i = particles.length - 1; i >= 0; i--) { 
                 let p = particles[i]; 
-                if (p.type === 'shockwave') { p.size += 15; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.lineWidth = p.thickness * p.alpha; vfxCtx.stroke(); vfxCtx.globalAlpha = 1; } 
+                if (p.type === 'shockwave') { p.size += 20; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.lineWidth = p.thickness * p.alpha; vfxCtx.stroke(); vfxCtx.globalAlpha = 1; } 
                 else if (p.type === 'spark') { p.size += p.growth; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; }
                 else { p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; } 
                 if (p.alpha <= 0) particles.splice(i, 1); 
@@ -362,8 +362,12 @@
 
             let resultSymbols = [];
             let isForcedJackpot = Math.random() < jackpotBonusChance;
-            if (isForcedJackpot) { let prize = Math.random() > 0.5 ? 'SS' : 'S'; resultSymbols = [prize, prize, prize]; } 
-            else { resultSymbols = [symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)]]; }
+            if (isForcedJackpot) { 
+                let prize = (currentMultiplier === 20) ? 'SS' : (Math.random() > 0.5 ? 'SS' : 'S'); 
+                resultSymbols = [prize, prize, prize]; 
+            } else { 
+                resultSymbols = [symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)]]; 
+            }
 
             let spinState = [true, true, true];
             let visualSpinInterval = setInterval(() => {
@@ -395,6 +399,7 @@
         function calcSlot(s1, s2, s3) {
             slotStatus.classList.remove('highlight');
             let isJackpot = false;
+            let newMultiplier = 1;
             
             let match3 = (s1 === s2 && s2 === s3) ? s1 : null;
             let match2 = null;
@@ -405,38 +410,54 @@
             }
 
             if (match3) {
-                if (match3 === 'SS') { currentMultiplier = 20; isJackpot = true; } 
-                else if (match3 === 'S') { currentMultiplier = 10; isJackpot = true; } 
-                else if (match3 === 'A') { currentMultiplier = 5; } 
-                else if (match3 === 'B') { currentMultiplier = 3; } 
-                else if (match3 === 'C') { currentMultiplier = 2; } 
+                if (match3 === 'SS') { newMultiplier = 20; isJackpot = true; } 
+                else if (match3 === 'S') { newMultiplier = 10; isJackpot = true; } 
+                else if (match3 === 'A') { newMultiplier = 5; } 
+                else if (match3 === 'B') { newMultiplier = 3; } 
+                else if (match3 === 'C') { newMultiplier = 2; } 
                 showMessage("極限爆發", "#ffeb3b"); triggerShake('heavy'); triggerFlash(0.4);
             } else if (match2) { 
-                if (match2 === 'SS') { currentMultiplier = 5; } 
-                else if (match2 === 'S') { currentMultiplier = 3; } 
-                else if (match2 === 'A') { currentMultiplier = 2; } 
-                else if (match2 === 'B') { currentMultiplier = 1.5; } 
-                else if (match2 === 'C') { currentMultiplier = 1.2; } 
+                if (match2 === 'SS') { newMultiplier = 5; } 
+                else if (match2 === 'S') { newMultiplier = 3; } 
+                else if (match2 === 'A') { newMultiplier = 2; } 
+                else if (match2 === 'B') { newMultiplier = 1.5; } 
+                else if (match2 === 'C') { newMultiplier = 1.2; } 
                 triggerShake('light'); 
-            } else { 
-                currentMultiplier = 1; 
             }
 
-            if (isJackpot) { 
-                jackpotBonusChance += 0.40; 
-                slotChainText.innerText = "連莊機率 " + Math.round(jackpotBonusChance * 100) + " 趴"; 
-                slotChainText.style.opacity = '1';
-                isInvincible = true;
-                playerHpBox.classList.add('invincible');
-            } else { 
+            if (newMultiplier >= currentMultiplier || buffEndTime <= Date.now()) {
+                currentMultiplier = newMultiplier;
+                
+                if (isJackpot) { 
+                    jackpotBonusChance = Math.min(jackpotBonusChance + 0.40, 0.85); 
+                    slotChainText.innerText = "連莊機率 " + Math.round(jackpotBonusChance * 100) + " 趴"; 
+                    slotChainText.style.opacity = '1';
+                    isInvincible = true;
+                    playerHpBox.classList.add('invincible');
+                } else { 
+                    jackpotBonusChance = 0; 
+                    slotChainText.style.opacity = '0';
+                    isInvincible = false;
+                    playerHpBox.classList.remove('invincible');
+                }
+                
+                slotStatus.innerText = "倍率 " + currentMultiplier;
+                if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
+
+            } else {
                 jackpotBonusChance = 0; 
                 slotChainText.style.opacity = '0';
-                isInvincible = false;
-                playerHpBox.classList.remove('invincible');
+                
+                if (buffEndTime > Date.now()) {
+                    slotStatus.innerText = "未連莊 維持 " + currentMultiplier;
+                } else {
+                    currentMultiplier = 1;
+                    isInvincible = false;
+                    playerHpBox.classList.remove('invincible');
+                    slotStatus.innerText = "未中獎 點擊重啟";
+                    clearBuffTimer();
+                }
             }
-            
-            slotStatus.innerText = "倍率 x " + currentMultiplier;
-            if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
         }
 
         function startBuffTimer(duration) {
@@ -447,7 +468,8 @@
                     clearInterval(buffInterval); currentMultiplier = 1; jackpotBonusChance = 0; 
                     isInvincible = false; playerHpBox.classList.remove('invincible');
                     buffContainer.style.opacity = '0'; slotChainText.style.opacity = '0'; 
-                    slotStatus.innerText = "加成結束 點擊重啟"; triggerShake('light'); 
+                    if (!isSpinning) slotStatus.innerText = "加成結束 點擊重啟"; 
+                    triggerShake('light'); 
                 } else {
                     let percent = (remaining / duration) * 100; buffFill.style.width = percent + '%';
                     if (percent < 25) { buffFill.style.background = '#d50000'; } 

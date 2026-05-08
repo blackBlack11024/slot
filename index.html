@@ -3,20 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拉霸與格擋：動態戰鬥 (增強打擊感版)</title>
+    <title>拉霸與格擋：極致打擊感版</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #1a1a1a;
+            background-color: #111;
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 遊戲主要容器，用於整體震動 */
+        #game-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             height: 100vh;
-            overflow: hidden;
-            user-select: none;
+            width: 100vw;
+            position: relative;
+        }
+
+        /* --- 畫面震動動畫 --- */
+        @keyframes shake-light {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-2px, -1px) rotate(-1deg); }
+            40% { transform: translate(1px, 2px) rotate(1deg); }
+            60% { transform: translate(-1px, 1px) rotate(0deg); }
+            80% { transform: translate(2px, -1px) rotate(-1deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        @keyframes shake-heavy {
+            0% { transform: translate(3px, 3px) rotate(0deg); }
+            10% { transform: translate(-4px, -3px) rotate(-2deg); }
+            20% { transform: translate(2px, 5px) rotate(2deg); }
+            30% { transform: translate(-5px, 2px) rotate(-1deg); }
+            40% { transform: translate(4px, -4px) rotate(1deg); }
+            50% { transform: translate(-3px, 4px) rotate(-2deg); }
+            60% { transform: translate(5px, 1px) rotate(2deg); }
+            70% { transform: translate(-2px, -5px) rotate(-1deg); }
+            80% { transform: translate(3px, 3px) rotate(1deg); }
+            90% { transform: translate(-4px, 2px) rotate(0deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        .shake-light { animation: shake-light 0.15s ease-out; }
+        .shake-heavy { animation: shake-heavy 0.3s ease-out; }
+
+        /* 全螢幕閃白特效 */
+        #flash-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.05s ease-out;
         }
 
         #top-ui {
@@ -28,8 +70,9 @@
             flex-direction: column;
             align-items: center;
             z-index: 10;
-            background-color: #222;
+            background-color: rgba(34, 34, 34, 0.9);
             border-bottom: 2px solid #444;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         .hp-container {
@@ -40,197 +83,163 @@
         }
 
         .hp-box {
-            background: #333;
+            background: #2a2a2a;
             padding: 10px 20px;
             border-radius: 8px;
             border: 2px solid #555;
             text-align: center;
             flex: 1;
             margin: 0 5px;
-            transition: transform 0.05s ease-out; /* 用於受傷脈動 */
+            transition: transform 0.05s ease-out;
         }
 
-        /* 受傷閃紅動畫 */
         @keyframes damageFlash {
-            0% { border-color: #f44336; box-shadow: 0 0 15px #f44336; }
-            100% { border-color: #555; box-shadow: none; }
+            0% { border-color: #ff1744; box-shadow: 0 0 20px #ff1744; background: #5a0000; }
+            100% { border-color: #555; box-shadow: none; background: #2a2a2a; }
         }
-        .hp-box.damaged {
-            animation: damageFlash 0.15s ease-out;
-        }
+        .hp-box.damaged { animation: damageFlash 0.2s ease-out; }
 
         .hp-bar {
             width: 100%;
             height: 20px;
-            background: #555;
+            background: #111;
             border-radius: 10px;
             overflow: hidden;
             margin-top: 5px;
+            border: 1px inset #333;
         }
 
         .hp-fill {
             height: 100%;
-            background: #4caf50;
+            background: linear-gradient(90deg, #4caf50, #81c784);
             width: 100%;
-            transition: width 0.15s ease-out; /* 加快血條變化速度 */
+            transition: width 0.1s ease-out;
         }
-        #enemy-hp-fill { background: #f44336; }
+        #enemy-hp-fill { background: linear-gradient(90deg, #d50000, #ff5252); }
 
-        /* 拉霸機樣式 */
+        /* 拉霸機 */
         #slot-machine-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: #111;
+            background: linear-gradient(145deg, #1a1a1a, #000);
             border: 3px solid #ffeb3b;
             padding: 10px 20px;
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(255, 235, 59, 0.2);
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.4);
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: transform 0.05s;
         }
-        #slot-machine-container:active { transform: scale(0.98); }
+        #slot-machine-container:active { transform: scale(0.95); }
         
         .slots {
             display: flex;
             gap: 15px;
             font-size: 40px;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             background: #000;
             padding: 10px;
             border-radius: 8px;
-            border: inset 3px #555;
+            border: inset 3px #444;
         }
         .slot-item {
-            width: 50px;
-            height: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #fff;
-            border-radius: 5px;
+            width: 50px; height: 50px;
+            display: flex; justify-content: center; align-items: center;
+            background: #fff; border-radius: 5px;
         }
-        .slot-info {
-            color: #ffeb3b;
-            font-weight: bold;
-            font-size: 18px;
-        }
+        .slot-info { color: #ffeb3b; font-weight: bold; font-size: 18px; text-shadow: 0 0 5px #ffeb3b; }
 
-        /* 戰鬥點擊區域 */
+        /* 戰鬥區 */
         #battle-area {
             flex-grow: 1;
             width: 100%;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             cursor: crosshair;
         }
 
         .hint-text {
-            color: #555;
-            font-size: 24px;
-            font-weight: bold;
-            pointer-events: none;
+            color: #444; font-size: 28px; font-weight: bold;
+            pointer-events: none; text-shadow: 1px 1px 2px #000;
         }
 
-        /* 絕對定位的格擋 Canvas */
         #parry-canvas {
             position: absolute;
-            width: 160px;
-            height: 160px;
-            pointer-events: none;
-            display: none;
-            z-index: 20;
-            border-radius: 50%;
+            width: 180px; height: 180px;
+            pointer-events: none; display: none; z-index: 20;
         }
 
-        /* 打擊特效 Canvas */
         #vfx-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* 平時不阻擋點擊，僅用於顯示特效 */
-            z-index: 25;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 25;
         }
 
         #message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
+            position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 32px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 30;
-            text-shadow: 2px 2px 4px #000;
+            font-size: 40px; font-weight: 900; font-style: italic;
+            pointer-events: none; z-index: 30;
+            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
     </style>
 </head>
 <body>
 
-    <div id="top-ui">
-        <div class="hp-container">
-            <div class="hp-box" id="player-hp-box">
-                <div>玩家 HP</div>
-                <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
+    <div id="game-container">
+        <div id="flash-overlay"></div>
+
+        <div id="top-ui">
+            <div class="hp-container">
+                <div class="hp-box" id="player-hp-box">
+                    <div>玩家 HP</div>
+                    <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
+                </div>
+                <div class="hp-box" id="enemy-hp-box">
+                    <div>敵人 HP</div>
+                    <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+                </div>
             </div>
-            <div class="hp-box" id="enemy-hp-box">
-                <div>敵人 HP</div>
-                <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+
+            <div id="slot-machine-container" onpointerdown="spinSlot()">
+                <div class="slots">
+                    <div class="slot-item" id="slot1">🍒</div>
+                    <div class="slot-item" id="slot2">🍒</div>
+                    <div class="slot-item" id="slot3">🍒</div>
+                </div>
+                <div class="slot-info" id="slot-status">點擊拉霸！(倍率: x1)</div>
             </div>
         </div>
 
-        <div id="slot-machine-container" onpointerdown="spinSlot()">
-            <div class="slots">
-                <div class="slot-item" id="slot1">🍒</div>
-                <div class="slot-item" id="slot2">🍒</div>
-                <div class="slot-item" id="slot3">🍒</div>
-            </div>
-            <div class="slot-info" id="slot-status">點擊拉霸！(目前倍率: x1)</div>
+        <div id="battle-area" onpointerdown="attackEnemy(event)">
+            <div class="hint-text">狂點畫面攻擊！</div>
+            <canvas id="parry-canvas" width="180" height="180"></canvas>
         </div>
+        
+        <canvas id="vfx-canvas"></canvas>
+        <div id="message"></div>
     </div>
-
-    <div id="battle-area" onpointerdown="attackEnemy(event)">
-        <div class="hint-text">點擊此區域任意處進行攻擊</div>
-        <!-- 格擋 Canvas 會隨機出現在這區塊內 -->
-        <canvas id="parry-canvas" width="160" height="160"></canvas>
-    </div>
-    
-    <!-- 用於繪製全螢幕打擊特效和傷害數字的畫布 -->
-    <canvas id="vfx-canvas"></canvas>
-
-    <div id="message"></div>
 
     <script>
-        // --- 遊戲狀態 ---
-        let maxPlayerHp = 100;
-        let playerHp = 100;
-        let maxEnemyHp = 1000;
-        let enemyHp = 1000;
-        
-        let baseAttack = 10;
-        let currentMultiplier = 1;
-        let enemyDamage = 20;
+        // --- 狀態 ---
+        let maxPlayerHp = 100, playerHp = 100;
+        let maxEnemyHp = 1000, enemyHp = 1000;
+        let baseAttack = 10, currentMultiplier = 1, enemyDamage = 20;
 
-        // --- 格擋機制狀態 ---
         let isEnemyAttacking = false;
-        let parryRadius = 80;        // 光圈起始半徑
-        const targetRadius = 30;     // 目標圓形半徑
-        const tolerance = 12;        // 判定成功的誤差範圍
+        let parryRadius = 90;
+        const targetRadius = 35;
+        const tolerance = 15;
         let parryAnimationId;
 
-        // --- DOM 元素 ---
+        // --- DOM ---
+        const container = document.getElementById('game-container');
+        const flashOverlay = document.getElementById('flash-overlay');
         const playerHpBox = document.getElementById('player-hp-box');
         const enemyHpBox = document.getElementById('enemy-hp-box');
         const playerHpFill = document.getElementById('player-hp-fill');
         const enemyHpFill = document.getElementById('enemy-hp-fill');
         const slotStatus = document.getElementById('slot-status');
-        const slot1 = document.getElementById('slot1');
-        const slot2 = document.getElementById('slot2');
-        const slot3 = document.getElementById('slot3');
+        const slots = [document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3')];
         const battleArea = document.getElementById('battle-area');
         const parryCanvas = document.getElementById('parry-canvas');
         const parryCtx = parryCanvas.getContext('2d');
@@ -240,7 +249,7 @@
 
         const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
 
-        // 初始化全螢幕 VFX Canvas 大小
+        // --- 初始化畫布 ---
         function resizeVfxCanvas() {
             vfxCanvas.width = window.innerWidth;
             vfxCanvas.height = window.innerHeight;
@@ -248,71 +257,85 @@
         window.addEventListener('resize', resizeVfxCanvas);
         resizeVfxCanvas();
 
+        // --- 特效函數 ---
         function showMessage(msg, color) {
             msgDiv.innerText = msg;
             msgDiv.style.color = color;
-            setTimeout(() => { msgDiv.innerText = ""; }, 800);
+            msgDiv.style.transform = `translate(-50%, -50%) scale(1.2)`;
+            setTimeout(() => msgDiv.style.transform = `translate(-50%, -50%) scale(1)`, 50);
+            setTimeout(() => { msgDiv.innerText = ""; }, 600);
         }
 
-        // --- 打擊感增強：HP 變化特效 ---
+        function triggerShake(intensity = 'light') {
+            container.classList.remove('shake-light', 'shake-heavy');
+            void container.offsetWidth; // 強制重繪
+            container.classList.add(`shake-${intensity}`);
+        }
+
+        function triggerFlash() {
+            flashOverlay.style.opacity = '0.5';
+            setTimeout(() => flashOverlay.style.opacity = '0', 50);
+        }
+
         function updateUI(target, isDamaged) {
             if (target === 'player') {
                 playerHpFill.style.width = Math.max(0, (playerHp / maxPlayerHp) * 100) + '%';
                 if (isDamaged) {
                     playerHpBox.classList.add('damaged');
-                    setTimeout(() => playerHpBox.classList.remove('damaged'), 150);
+                    setTimeout(() => playerHpBox.classList.remove('damaged'), 200);
                 }
             } else if (target === 'enemy') {
                 enemyHpFill.style.width = Math.max(0, (enemyHp / maxEnemyHp) * 100) + '%';
                 if (isDamaged) {
                     enemyHpBox.classList.add('damaged');
-                    // 敵人 HP 脈動效果
-                    enemyHpBox.style.transform = 'scale(1.05)';
+                    enemyHpBox.style.transform = 'scale(1.1)';
                     setTimeout(() => {
                         enemyHpBox.classList.remove('damaged');
                         enemyHpBox.style.transform = 'scale(1)';
-                    }, 150);
+                    }, 100);
                 }
             }
         }
 
-        // --- 打擊感增強：視覺特效與傷害數字 ---
+        // --- 視覺特效 (VFX) 系統 ---
         let particles = [];
         let damageNumbers = [];
+        let slashes = []; // 斬擊刀光
 
         function addVfx(x, y, type) {
             if (type === 'hit') {
-                // 黃色斬擊粒子
-                for (let i = 0; i < 10; i++) {
+                // 產生刀光
+                let angle = Math.random() * Math.PI * 2;
+                slashes.push({
+                    x: x, y: y,
+                    angle: angle,
+                    length: 100 + Math.random() * 80,
+                    alpha: 1,
+                    decay: 0.1
+                });
+
+                // 產生帶重力的火花粒子
+                for (let i = 0; i < 12; i++) {
                     particles.push({
                         x: x, y: y,
-                        vx: (Math.random() - 0.5) * 8,
-                        vy: (Math.random() - 0.5) * 8,
-                        size: Math.random() * 5 + 2,
-                        color: '#ffeb3b',
+                        vx: (Math.random() - 0.5) * 15,
+                        vy: (Math.random() - 0.5) * 15 - 5, // 初始向上噴
+                        gravity: 0.8,
+                        size: Math.random() * 6 + 2,
+                        color: currentMultiplier >= 5 ? '#00e5ff' : '#ffeb3b', // 高倍率變藍火花
                         alpha: 1,
-                        decay: 0.05
+                        decay: 0.03 + Math.random() * 0.03
                     });
                 }
             } else if (type === 'parry') {
-                // 完美格擋shockwave
-                particles.push({
-                    x: x, y: y,
-                    type: 'shockwave',
-                    size: 20,
-                    color: '#00e676',
-                    alpha: 1,
-                    decay: 0.03
-                });
-                for (let i = 0; i < 20; i++) {
+                // 完美格擋光圈
+                particles.push({ x: x, y: y, type: 'shockwave', size: 10, color: '#00e676', alpha: 1, decay: 0.04 });
+                for (let i = 0; i < 30; i++) {
                      particles.push({
                         x: x, y: y,
-                        vx: (Math.random() - 0.5) * 15,
-                        vy: (Math.random() - 0.5) * 15,
-                        size: Math.random() * 6 + 3,
-                        color: '#b2ff59',
-                        alpha: 1,
-                        decay: 0.04
+                        vx: (Math.random() - 0.5) * 25, vy: (Math.random() - 0.5) * 25,
+                        gravity: 0, size: Math.random() * 8 + 4,
+                        color: '#b2ff59', alpha: 1, decay: 0.05
                     });
                 }
             }
@@ -320,49 +343,85 @@
 
         function addDamageNumber(x, y, damage, multiplier) {
             damageNumbers.push({
-                x: x, y: y - 20,
+                x: x + (Math.random() - 0.5) * 40, 
+                y: y - 20,
                 damage: damage,
                 multiplier: multiplier,
-                vy: -2, // 向上漂浮
-                alpha: 1,
-                decay: 0.02
+                vx: (Math.random() - 0.5) * 2,
+                vy: -6 - Math.random() * 4, // 初始向上彈
+                gravity: 0.4,
+                alpha: 1.5, // 延長顯示時間
+                scale: multiplier >= 5 ? 1.5 : 1 // 高倍率數字變大
             });
         }
 
         function updateVfx() {
             vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
 
-            // 更新與繪製粒子
+            // 繪製刀光
+            for (let i = slashes.length - 1; i >= 0; i--) {
+                let s = slashes[i];
+                s.alpha -= s.decay;
+                
+                vfxCtx.save();
+                vfxCtx.translate(s.x, s.y);
+                vfxCtx.rotate(s.angle);
+                vfxCtx.beginPath();
+                vfxCtx.moveTo(-s.length/2, 0);
+                vfxCtx.lineTo(s.length/2, 0);
+                vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`;
+                vfxCtx.lineWidth = 4 + s.alpha * 4;
+                vfxCtx.shadowBlur = 10;
+                vfxCtx.shadowColor = '#fff';
+                vfxCtx.stroke();
+                vfxCtx.restore();
+
+                if (s.alpha <= 0) slashes.splice(i, 1);
+            }
+
+            // 繪製粒子
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 if (p.type === 'shockwave') {
-                    p.size += 5;
-                    p.alpha -= p.decay;
+                    p.size += 8; p.alpha -= p.decay;
                     vfxCtx.beginPath();
                     vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                     vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`;
-                    vfxCtx.lineWidth = 4;
+                    vfxCtx.lineWidth = 6;
                     vfxCtx.stroke();
                 } else {
-                    p.x += p.vx;
-                    p.y += p.vy;
+                    p.vy += p.gravity; // 套用重力
+                    p.x += p.vx; p.y += p.vy;
                     p.alpha -= p.decay;
                     vfxCtx.beginPath();
                     vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    vfxCtx.fillStyle = `rgba(255, 235, 59, ${p.alpha})`;
+                    vfxCtx.fillStyle = p.color;
+                    vfxCtx.globalAlpha = Math.max(0, p.alpha);
                     vfxCtx.fill();
+                    vfxCtx.globalAlpha = 1;
                 }
                 if (p.alpha <= 0) particles.splice(i, 1);
             }
 
-            // 更新與繪製傷害數字
+            // 繪製傷害數字
             for (let i = damageNumbers.length - 1; i >= 0; i--) {
                 let d = damageNumbers[i];
-                d.y += d.vy;
-                d.alpha -= d.decay;
-                vfxCtx.font = 'bold 30px Arial';
-                vfxCtx.fillStyle = `rgba(244, 67, 54, ${d.alpha})`; // 紅色
-                vfxCtx.fillText(`-${d.damage}x${d.multiplier}`, d.x, d.y);
+                d.vy += d.gravity; // 數字也會往下掉
+                d.x += d.vx; d.y += d.vy;
+                d.alpha -= 0.03;
+                
+                vfxCtx.save();
+                vfxCtx.translate(d.x, d.y);
+                vfxCtx.scale(d.scale, d.scale);
+                vfxCtx.font = '900 36px Arial';
+                vfxCtx.fillStyle = `rgba(255, 60, 60, ${Math.min(1, d.alpha)})`;
+                vfxCtx.strokeStyle = `rgba(0, 0, 0, ${Math.min(1, d.alpha)})`;
+                vfxCtx.lineWidth = 4;
+                let text = `-${d.damage}`;
+                if (d.multiplier > 1) text += `(x${d.multiplier})`;
+                vfxCtx.strokeText(text, 0, 0);
+                vfxCtx.fillText(text, 0, 0);
+                vfxCtx.restore();
                 
                 if (d.alpha <= 0) damageNumbers.splice(i, 1);
             }
@@ -380,53 +439,52 @@
             slotStatus.innerText = "旋轉中...";
             
             let interval = setInterval(() => {
-                slot1.innerText = symbols[Math.floor(Math.random() * symbols.length)];
-                slot2.innerText = symbols[Math.floor(Math.random() * symbols.length)];
-                slot3.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                slots.forEach(s => s.innerText = symbols[Math.floor(Math.random() * symbols.length)]);
                 rolls++;
-                
-                if (rolls > 20) {
+                if (rolls > 15) {
                     clearInterval(interval);
-                    calculateSlotResult();
+                    calcSlot();
                     isSpinning = false;
                 }
-            }, 50);
+            }, 60);
         }
 
-        function calculateSlotResult() {
-            let s1 = slot1.innerText;
-            let s2 = slot2.innerText;
-            let s3 = slot3.innerText;
-
+        function calcSlot() {
+            let s1 = slots[0].innerText, s2 = slots[1].innerText, s3 = slots[2].innerText;
             if (s1 === s2 && s2 === s3) {
-                if (s1 === '7️⃣') currentMultiplier = 10;
-                else if (s1 === '💎') currentMultiplier = 5;
-                else currentMultiplier = 3;
-                showMessage("大爆發！", "#ffeb3b");
+                currentMultiplier = (s1 === '7️⃣') ? 10 : (s1 === '💎') ? 5 : 3;
+                showMessage("🔥 終極爆發 🔥", "#ffeb3b");
+                triggerShake('heavy');
             } else if (s1 === s2 || s2 === s3 || s1 === s3) {
-                currentMultiplier = 2; // 兩個一樣
+                currentMultiplier = 2;
             } else {
-                currentMultiplier = 1; // 都沒中
+                currentMultiplier = 1;
             }
-            
-            slotStatus.innerText = `點擊拉霸！(目前倍率: x${currentMultiplier})`;
+            slotStatus.innerText = `目前倍率: x${currentMultiplier}`;
         }
 
         // --- 玩家攻擊 ---
         function attackEnemy(e) {
-            // 如果點擊目標是 canvas（格擋區），不觸發一般攻擊
             if (e.target === parryCanvas) return;
             
-            // 加入打擊特效和數字
-            addVfx(e.clientX, e.clientY, 'hit');
             let totalDamage = baseAttack * currentMultiplier;
+            addVfx(e.clientX, e.clientY, 'hit');
             addDamageNumber(e.clientX, e.clientY, totalDamage, currentMultiplier);
             
+            // 根據倍率決定震動與閃爍強度
+            if (currentMultiplier >= 5) {
+                triggerShake('heavy');
+                triggerFlash();
+            } else {
+                triggerShake('light');
+            }
+
             enemyHp -= totalDamage;
             updateUI('enemy', true);
             
             if (enemyHp <= 0) {
-                showMessage("擊殺敵人！", "#03a9f4");
+                showMessage("敵人已擊破！", "#00e5ff");
+                triggerShake('heavy');
                 enemyHp = maxEnemyHp;
                 updateUI('enemy', false);
             }
@@ -436,48 +494,42 @@
         function startEnemyAttack() {
             if (isEnemyAttacking) return;
             isEnemyAttacking = true;
-            parryRadius = 80; // 重置光圈大小
+            parryRadius = 90;
             
             const areaRect = battleArea.getBoundingClientRect();
-            const maxX = areaRect.width - parryCanvas.width;
-            const maxY = areaRect.height - parryCanvas.height;
+            let rx = Math.max(0, Math.random() * (areaRect.width - parryCanvas.width));
+            let ry = Math.max(0, Math.random() * (areaRect.height - parryCanvas.height));
             
-            let randomX = Math.max(0, Math.random() * maxX);
-            let randomY = Math.max(0, Math.random() * maxY);
-            
-            parryCanvas.style.left = randomX + 'px';
-            parryCanvas.style.top = randomY + 'px';
+            parryCanvas.style.left = rx + 'px';
+            parryCanvas.style.top = ry + 'px';
             parryCanvas.style.display = 'block';
-            parryCanvas.style.pointerEvents = 'auto'; // 攔截點擊
+            parryCanvas.style.pointerEvents = 'auto';
             
             drawParry();
         }
 
         function drawParry() {
             parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
-            const centerX = parryCanvas.width / 2;
-            const centerY = parryCanvas.height / 2;
+            const cx = parryCanvas.width / 2, cy = parryCanvas.height / 2;
 
-            // 目標圓形
             parryCtx.beginPath();
-            parryCtx.arc(centerX, centerY, targetRadius, 0, Math.PI * 2);
-            parryCtx.strokeStyle = '#fff';
-            parryCtx.lineWidth = 3;
-            parryCtx.setLineDash([5, 5]);
+            parryCtx.arc(cx, cy, targetRadius, 0, Math.PI * 2);
+            parryCtx.strokeStyle = 'rgba(255,255,255,0.8)';
+            parryCtx.lineWidth = 4;
+            parryCtx.setLineDash([8, 8]);
             parryCtx.stroke();
             parryCtx.setLineDash([]);
 
-            // 動態縮小的光圈
             parryCtx.beginPath();
-            parryCtx.arc(centerX, centerY, Math.max(0, parryRadius), 0, Math.PI * 2);
-            parryCtx.strokeStyle = '#e91e63'; // 紅色系
-            parryCtx.lineWidth = 4;
-            parryCtx.shadowBlur = 10;
-            parryCtx.shadowColor = '#e91e63';
+            parryCtx.arc(cx, cy, Math.max(0, parryRadius), 0, Math.PI * 2);
+            parryCtx.strokeStyle = '#ff1744';
+            parryCtx.lineWidth = 5;
+            parryCtx.shadowBlur = 15;
+            parryCtx.shadowColor = '#ff1744';
             parryCtx.stroke();
             parryCtx.shadowBlur = 0;
 
-            parryRadius -= 1.5; // 收縮速度
+            parryRadius -= 1.8;
 
             if (parryRadius <= 0) {
                 failParry();
@@ -486,47 +538,37 @@
             }
         }
 
-        // 玩家點擊畫布進行格擋
         parryCanvas.addEventListener('pointerdown', (e) => {
             if (!isEnemyAttacking) return;
-            
-            let diff = Math.abs(parryRadius - targetRadius);
-            
-            if (diff <= tolerance) {
-                successParry(e);
-            } else {
-                failParry();
-            }
+            if (Math.abs(parryRadius - targetRadius) <= tolerance) successParry(e);
+            else failParry();
         });
 
         function successParry(e) {
             cancelAnimationFrame(parryAnimationId);
-            showMessage("完美格擋！", "#00e676");
+            triggerShake('heavy');
+            showMessage("✨ PERFECT ✨", "#00e676");
             
-            // 完美格擋特效：在點擊位置加入電光 shockwave
-            const canvasRect = parryCanvas.getBoundingClientRect();
-            addVfx(canvasRect.left + parryCanvas.width / 2, canvasRect.top + parryCanvas.height / 2, 'parry');
+            const rect = parryCanvas.getBoundingClientRect();
+            addVfx(rect.left + rect.width/2, rect.top + rect.height/2, 'parry');
             
-            // 反擊傷害
-            enemyHp -= baseAttack * 3; 
+            enemyHp -= baseAttack * 5; 
             updateUI('enemy', true);
-            
             endEnemyAttack();
         }
 
         function failParry() {
             cancelAnimationFrame(parryAnimationId);
-            showMessage("受到攻擊！", "#f44336");
+            triggerShake('heavy');
+            showMessage("❌ 受擊 ❌", "#ff1744");
             
             playerHp -= enemyDamage;
-            updateUI('player', true); // 玩家血條閃紅震動
+            updateUI('player', true);
             
             if (playerHp <= 0) {
-                alert("你被擊敗了！");
-                playerHp = maxPlayerHp;
-                enemyHp = maxEnemyHp;
-                updateUI('player', false);
-                updateUI('enemy', false);
+                setTimeout(() => alert("Game Over! 重新開始"), 100);
+                playerHp = maxPlayerHp; enemyHp = maxEnemyHp;
+                updateUI('player', false); updateUI('enemy', false);
             }
             endEnemyAttack();
         }
@@ -535,25 +577,18 @@
             isEnemyAttacking = false;
             parryCanvas.style.display = 'none';
             parryCanvas.style.pointerEvents = 'none';
-            parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
         }
 
-        // --- 遊戲迴圈 ---
+        // --- 迴圈 ---
         function scheduleNextEnemyAttack() {
-            let delay = Math.random() * 3000 + 2000; // 2~5秒隨機攻擊
             setTimeout(() => {
-                if (playerHp > 0) {
-                    startEnemyAttack();
-                }
+                if (playerHp > 0) startEnemyAttack();
                 scheduleNextEnemyAttack();
-            }, delay);
+            }, Math.random() * 2000 + 1500);
         }
 
-        // 初始化
-        updateUI('player', false);
-        updateUI('enemy', false);
+        updateUI('player', false); updateUI('enemy', false);
         scheduleNextEnemyAttack();
-
     </script>
 </body>
 </html>

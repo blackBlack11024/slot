@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拉霸與格擋：連莊爆發版</title>
+    <title>拉霸</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -76,10 +76,7 @@
         .slot-info.highlight { color: #ff1744; text-shadow: 0 0 15px #ff1744; font-size: 18px;}
         .slot-chain-text { color: #00e5ff; font-size: 14px; margin-top: 5px; text-shadow: 0 0 5px #00e5ff; display: none; }
 
-        /* 時效條 (Buff Timer) */
-        #buff-bar-container {
-            width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; border: 1px solid #444;
-        }
+        #buff-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; border: 1px solid #444; }
         #buff-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ffeb3b, #ff9800); }
 
         /* 戰鬥區 */
@@ -119,11 +116,7 @@
                 </div>
                 <div class="slot-info" id="slot-status">點擊啟動拉霸機！</div>
                 <div class="slot-chain-text" id="slot-chain">連莊機率提升！</div>
-                
-                <!-- 新增：時效條 -->
-                <div id="buff-bar-container">
-                    <div id="buff-bar-fill"></div>
-                </div>
+                <div id="buff-bar-container"><div id="buff-bar-fill"></div></div>
             </div>
         </div>
 
@@ -139,15 +132,17 @@
     <script>
         // --- 狀態 ---
         let maxPlayerHp = 100, playerHp = 100;
-        let maxEnemyHp = 3000, enemyHp = 3000; // 稍微調高敵人血量讓你有時間連莊
+        let maxEnemyHp = 3000, enemyHp = 3000; 
         let baseAttack = 10, currentMultiplier = 1, enemyDamage = 20;
 
         let isEnemyAttacking = false;
-        let parryRadius = 0; const targetRadius = 60; const tolerance = 25;
+        let parryRadius = 0; const targetRadius = 60; const tolerance = 30;
         let parryShrinkSpeed = 5; let parryAnimationId;
+        
+        // 新增：紀錄格擋開始的時間，用於防誤觸
+        let parryStartTime = 0; 
 
-        // --- 新增：時效與連莊狀態 ---
-        let jackpotBonusChance = 0; // 大獎額外機率 (0 ~ 1)
+        let jackpotBonusChance = 0; 
         let buffInterval = null;
         let buffEndTime = 0;
 
@@ -172,7 +167,7 @@
 
         const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
 
-        // --- 初始化與基礎功能 ---
+        // --- 初始化 ---
         function resizeCanvas() { vfxCanvas.width = window.innerWidth; vfxCanvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
@@ -204,9 +199,7 @@
         function addVfx(x, y, type) {
             if (type === 'hit') {
                 slashes.push({ x: x, y: y, angle: Math.random() * Math.PI * 2, length: 100 + Math.random() * 80, alpha: 1, decay: 0.1 });
-                for (let i = 0; i < 12; i++) {
-                    particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15 - 5, gravity: 0.8, size: Math.random() * 6 + 2, color: currentMultiplier >= 5 ? '#00e5ff' : '#ffeb3b', alpha: 1, decay: 0.03 + Math.random() * 0.03 });
-                }
+                for (let i = 0; i < 12; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15 - 5, gravity: 0.8, size: Math.random() * 6 + 2, color: currentMultiplier >= 5 ? '#00e5ff' : '#ffeb3b', alpha: 1, decay: 0.03 + Math.random() * 0.03 }); }
             } else if (type === 'parry') {
                 particles.push({ x: x, y: y, type: 'shockwave', size: 20, color: '#00e676', alpha: 1, decay: 0.04 });
                 for (let i = 0; i < 40; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, gravity: 0, size: Math.random() * 10 + 4, color: '#b2ff59', alpha: 1, decay: 0.04 }); }
@@ -219,20 +212,9 @@
 
         function updateVfx() {
             vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
-            for (let i = slashes.length - 1; i >= 0; i--) {
-                let s = slashes[i]; s.alpha -= s.decay; vfxCtx.save(); vfxCtx.translate(s.x, s.y); vfxCtx.rotate(s.angle); vfxCtx.beginPath(); vfxCtx.moveTo(-s.length/2, 0); vfxCtx.lineTo(s.length/2, 0); vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; vfxCtx.lineWidth = 4 + s.alpha * 4; vfxCtx.shadowBlur = 10; vfxCtx.shadowColor = '#fff'; vfxCtx.stroke(); vfxCtx.restore();
-                if (s.alpha <= 0) slashes.splice(i, 1);
-            }
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                if (p.type === 'shockwave') { p.size += 15; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`; vfxCtx.lineWidth = 8; vfxCtx.stroke(); }
-                else { p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; }
-                if (p.alpha <= 0) particles.splice(i, 1);
-            }
-            for (let i = damageNumbers.length - 1; i >= 0; i--) {
-                let d = damageNumbers[i]; d.vy += d.gravity; d.x += d.vx; d.y += d.vy; d.alpha -= 0.03; vfxCtx.save(); vfxCtx.translate(d.x, d.y); vfxCtx.scale(d.scale, d.scale); vfxCtx.font = '900 36px Arial'; vfxCtx.fillStyle = `rgba(255, 60, 60, ${Math.min(1, d.alpha)})`; vfxCtx.strokeStyle = `rgba(0, 0, 0, ${Math.min(1, d.alpha)})`; vfxCtx.lineWidth = 4; let text = `-${d.damage}` + (d.multiplier > 1 ? `(x${d.multiplier})` : ""); vfxCtx.strokeText(text, 0, 0); vfxCtx.fillText(text, 0, 0); vfxCtx.restore();
-                if (d.alpha <= 0) damageNumbers.splice(i, 1);
-            }
+            for (let i = slashes.length - 1; i >= 0; i--) { let s = slashes[i]; s.alpha -= s.decay; vfxCtx.save(); vfxCtx.translate(s.x, s.y); vfxCtx.rotate(s.angle); vfxCtx.beginPath(); vfxCtx.moveTo(-s.length/2, 0); vfxCtx.lineTo(s.length/2, 0); vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; vfxCtx.lineWidth = 4 + s.alpha * 4; vfxCtx.shadowBlur = 10; vfxCtx.shadowColor = '#fff'; vfxCtx.stroke(); vfxCtx.restore(); if (s.alpha <= 0) slashes.splice(i, 1); }
+            for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; if (p.type === 'shockwave') { p.size += 15; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`; vfxCtx.lineWidth = 8; vfxCtx.stroke(); } else { p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; } if (p.alpha <= 0) particles.splice(i, 1); }
+            for (let i = damageNumbers.length - 1; i >= 0; i--) { let d = damageNumbers[i]; d.vy += d.gravity; d.x += d.vx; d.y += d.vy; d.alpha -= 0.03; vfxCtx.save(); vfxCtx.translate(d.x, d.y); vfxCtx.scale(d.scale, d.scale); vfxCtx.font = '900 36px Arial'; vfxCtx.fillStyle = `rgba(255, 60, 60, ${Math.min(1, d.alpha)})`; vfxCtx.strokeStyle = `rgba(0, 0, 0, ${Math.min(1, d.alpha)})`; vfxCtx.lineWidth = 4; let text = `-${d.damage}` + (d.multiplier > 1 ? `(x${d.multiplier})` : ""); vfxCtx.strokeText(text, 0, 0); vfxCtx.fillText(text, 0, 0); vfxCtx.restore(); if (d.alpha <= 0) damageNumbers.splice(i, 1); }
             requestAnimationFrame(updateVfx);
         }
         updateVfx();
@@ -244,23 +226,12 @@
             isSpinning = true;
             slotStatus.innerText = "🌀 旋轉中... 🌀";
             slotStatus.classList.remove('highlight');
-            
             slots.forEach(s => { s.classList.remove('locked', 'tension'); s.classList.add('spinning'); });
 
-            // 根據累積的大獎機率，決定這輪是否要「強制給大獎」
             let resultSymbols = [];
             let isForcedJackpot = Math.random() < jackpotBonusChance;
-
-            if (isForcedJackpot) {
-                let prize = Math.random() > 0.5 ? '7️⃣' : '💎';
-                resultSymbols = [prize, prize, prize];
-            } else {
-                resultSymbols = [
-                    symbols[Math.floor(Math.random() * symbols.length)],
-                    symbols[Math.floor(Math.random() * symbols.length)],
-                    symbols[Math.floor(Math.random() * symbols.length)]
-                ];
-            }
+            if (isForcedJackpot) { let prize = Math.random() > 0.5 ? '7️⃣' : '💎'; resultSymbols = [prize, prize, prize]; } 
+            else { resultSymbols = [symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)]]; }
 
             let spinState = [true, true, true];
             let visualSpinInterval = setInterval(() => {
@@ -269,31 +240,14 @@
                 if(spinState[2]) slots[2].innerText = symbols[Math.floor(Math.random() * symbols.length)];
             }, 40);
 
+            setTimeout(() => { spinState[0] = false; slots[0].innerText = resultSymbols[0]; slots[0].classList.remove('spinning'); slots[0].classList.add('locked'); triggerShake('micro'); }, 600);
             setTimeout(() => {
-                spinState[0] = false; slots[0].innerText = resultSymbols[0];
-                slots[0].classList.remove('spinning'); slots[0].classList.add('locked'); triggerShake('micro');
-            }, 600);
-
-            setTimeout(() => {
-                spinState[1] = false; slots[1].innerText = resultSymbols[1];
-                slots[1].classList.remove('spinning'); slots[1].classList.add('locked'); triggerShake('micro');
-
-                let tensionDelay = 600; 
-                let isTension = (resultSymbols[0] === resultSymbols[1] && (resultSymbols[0] === '7️⃣' || resultSymbols[0] === '💎'));
-
-                if (isTension) {
-                    tensionDelay = 2000;
-                    slots[2].classList.remove('spinning'); slots[2].classList.add('tension'); 
-                    slotStatus.innerText = "⚠️ 聽牌！要中了嗎？！ ⚠️";
-                    slotStatus.classList.add('highlight');
-                }
-
+                spinState[1] = false; slots[1].innerText = resultSymbols[1]; slots[1].classList.remove('spinning'); slots[1].classList.add('locked'); triggerShake('micro');
+                let tensionDelay = 600; let isTension = (resultSymbols[0] === resultSymbols[1] && (resultSymbols[0] === '7️⃣' || resultSymbols[0] === '💎'));
+                if (isTension) { tensionDelay = 2000; slots[2].classList.remove('spinning'); slots[2].classList.add('tension'); slotStatus.innerText = "⚠️ 聽牌！要中了嗎？！ ⚠️"; slotStatus.classList.add('highlight'); }
                 setTimeout(() => {
-                    spinState[2] = false; slots[2].innerText = resultSymbols[2];
-                    slots[2].classList.remove('spinning', 'tension'); slots[2].classList.add('locked');
-                    clearInterval(visualSpinInterval);
-                    calcSlot(resultSymbols[0], resultSymbols[1], resultSymbols[2]);
-                    isSpinning = false;
+                    spinState[2] = false; slots[2].innerText = resultSymbols[2]; slots[2].classList.remove('spinning', 'tension'); slots[2].classList.add('locked');
+                    clearInterval(visualSpinInterval); calcSlot(resultSymbols[0], resultSymbols[1], resultSymbols[2]); isSpinning = false;
                 }, tensionDelay);
             }, 1200);
         }
@@ -301,83 +255,39 @@
         function calcSlot(s1, s2, s3) {
             slotStatus.classList.remove('highlight');
             let isJackpot = false;
-
             if (s1 === s2 && s2 === s3) {
-                if (s1 === '7️⃣') { currentMultiplier = 10; isJackpot = true; }
-                else if (s1 === '💎') { currentMultiplier = 5; isJackpot = true; }
-                else { currentMultiplier = 3; } // 一般三個相同
-                
-                showMessage("🔥 終極爆發 🔥", "#ffeb3b");
-                triggerShake('heavy'); triggerFlash();
-            } else if (s1 === s2 || s2 === s3 || s1 === s3) {
-                currentMultiplier = 2; triggerShake('light');
-            } else {
-                currentMultiplier = 1;
-            }
+                if (s1 === '7️⃣') { currentMultiplier = 10; isJackpot = true; } else if (s1 === '💎') { currentMultiplier = 5; isJackpot = true; } else { currentMultiplier = 3; }
+                showMessage("🔥 終極爆發 🔥", "#ffeb3b"); triggerShake('heavy'); triggerFlash();
+            } else if (s1 === s2 || s2 === s3 || s1 === s3) { currentMultiplier = 2; triggerShake('light'); } 
+            else { currentMultiplier = 1; }
 
-            // 更新大獎連莊機率
             if (isJackpot) {
-                jackpotBonusChance += 0.20; // 每次抽中大獎，下次再中的機率提升 20%
-                slotChainText.innerText = `🔥 連莊機率額外提升 +${Math.round(jackpotBonusChance * 100)}% 🔥`;
-                slotChainText.style.display = 'block';
-            } else {
-                jackpotBonusChance = 0; // 斷連
-                slotChainText.style.display = 'none';
-            }
+                jackpotBonusChance += 0.20; slotChainText.innerText = `🔥 連莊機率額外提升 +${Math.round(jackpotBonusChance * 100)}% 🔥`; slotChainText.style.display = 'block';
+            } else { jackpotBonusChance = 0; slotChainText.style.display = 'none'; }
             
             slotStatus.innerText = `目前倍率: x${currentMultiplier}`;
-
-            // 啟動或重置加成時效 (8秒)
-            if (currentMultiplier > 1) {
-                startBuffTimer(8000);
-            } else {
-                clearBuffTimer();
-            }
+            if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
         }
 
-        // --- 加成時效系統 ---
         function startBuffTimer(duration) {
-            clearInterval(buffInterval);
-            buffContainer.style.display = 'block';
-            buffEndTime = Date.now() + duration;
-
+            clearInterval(buffInterval); buffContainer.style.display = 'block'; buffEndTime = Date.now() + duration;
             buffInterval = setInterval(() => {
                 let remaining = buffEndTime - Date.now();
                 if (remaining <= 0) {
-                    // 時間到，拔除加成與斷連
-                    clearInterval(buffInterval);
-                    currentMultiplier = 1;
-                    jackpotBonusChance = 0;
-                    buffContainer.style.display = 'none';
-                    slotChainText.style.display = 'none';
-                    slotStatus.innerText = "加成結束！點擊重新拉霸";
-                    triggerShake('light');
+                    clearInterval(buffInterval); currentMultiplier = 1; jackpotBonusChance = 0; buffContainer.style.display = 'none'; slotChainText.style.display = 'none'; slotStatus.innerText = "加成結束！點擊重新拉霸"; triggerShake('light');
                 } else {
-                    let percent = (remaining / duration) * 100;
-                    buffFill.style.width = percent + '%';
-                    
-                    // 剩餘時間不足 25% 時閃爍警告紅光
-                    if (percent < 25) {
-                        buffFill.style.background = 'linear-gradient(90deg, #ff1744, #d50000)';
-                    } else {
-                        buffFill.style.background = 'linear-gradient(90deg, #ffeb3b, #ff9800)';
-                    }
+                    let percent = (remaining / duration) * 100; buffFill.style.width = percent + '%';
+                    if (percent < 25) { buffFill.style.background = 'linear-gradient(90deg, #ff1744, #d50000)'; } else { buffFill.style.background = 'linear-gradient(90deg, #ffeb3b, #ff9800)'; }
                 }
             }, 30);
         }
+        function clearBuffTimer() { clearInterval(buffInterval); buffContainer.style.display = 'none'; }
 
-        function clearBuffTimer() {
-            clearInterval(buffInterval);
-            buffContainer.style.display = 'none';
-        }
-
-        // --- 戰鬥 ---
-        function attackEnemy(e) {
-            if (isEnemyAttacking) return;
-            
+        // --- 核心戰鬥邏輯（分離出來以供重複呼叫） ---
+        function executeAttack(clientX, clientY) {
             let totalDamage = baseAttack * currentMultiplier;
-            addVfx(e.clientX, e.clientY, 'hit');
-            addDamageNumber(e.clientX, e.clientY, totalDamage, currentMultiplier);
+            addVfx(clientX, clientY, 'hit');
+            addDamageNumber(clientX, clientY, totalDamage, currentMultiplier);
             
             if (currentMultiplier >= 5) { triggerShake('heavy'); triggerFlash(); } 
             else { triggerShake('light'); }
@@ -390,14 +300,27 @@
             }
         }
 
+        // 一般攻擊綁定
+        function attackEnemy(e) {
+            if (e.target === parryCanvas) return;
+            executeAttack(e.clientX, e.clientY);
+        }
+
         // --- 格擋機制 ---
         function startEnemyAttack() {
             if (isEnemyAttacking) return;
             isEnemyAttacking = true; 
+            
+            // 紀錄攻擊開始的時間，用於判定緩衝
+            parryStartTime = Date.now();
+            
             const rect = battleArea.getBoundingClientRect();
             parryCanvas.width = rect.width; parryCanvas.height = rect.height;
             parryRadius = Math.max(rect.width, rect.height) * 0.8;
-            parryShrinkSpeed = (parryRadius - targetRadius) / 50; 
+            
+            // 讓光圈縮小時間大約為 1 秒 (60幀計算)
+            parryShrinkSpeed = (parryRadius - targetRadius) / 60; 
+            
             parryCanvas.style.display = 'block'; parryCanvas.style.pointerEvents = 'auto';
             drawParry();
         }
@@ -405,15 +328,32 @@
         function drawParry() {
             parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
             const cx = parryCanvas.width / 2, cy = parryCanvas.height / 2;
+            
             parryCtx.beginPath(); parryCtx.arc(cx, cy, targetRadius, 0, Math.PI * 2); parryCtx.strokeStyle = 'rgba(255,255,255,0.8)'; parryCtx.lineWidth = 4; parryCtx.setLineDash([10, 10]); parryCtx.stroke(); parryCtx.setLineDash([]);
             parryCtx.beginPath(); parryCtx.arc(cx, cy, Math.max(0, parryRadius), 0, Math.PI * 2); parryCtx.strokeStyle = '#ff1744'; parryCtx.lineWidth = 6; parryCtx.shadowBlur = 20; parryCtx.shadowColor = '#ff1744'; parryCtx.stroke(); parryCtx.shadowBlur = 0;
+            
             parryRadius -= parryShrinkSpeed;
             if (parryRadius <= 0) failParry(); else parryAnimationId = requestAnimationFrame(drawParry);
         }
 
+        // 判定格擋或緩衝攻擊
         parryCanvas.addEventListener('pointerdown', (e) => {
             if (!isEnemyAttacking) return;
-            if (Math.abs(parryRadius - targetRadius) <= tolerance) successParry(e); else failParry();
+
+            let timeSinceStart = Date.now() - parryStartTime;
+
+            // 緩衝機制：前 350 毫秒的點擊，直接轉化為一般攻擊！不會因為來不及收手而失敗
+            if (timeSinceStart < 350) {
+                executeAttack(e.clientX, e.clientY);
+                return;
+            }
+
+            // 過了緩衝時間，大腦應該已經反應過來了，此時點擊就會認真判定格擋
+            if (Math.abs(parryRadius - targetRadius) <= tolerance) {
+                successParry(e); 
+            } else {
+                failParry();
+            }
         });
 
         function successParry(e) {
@@ -430,7 +370,14 @@
         }
 
         function endEnemyAttack() { isEnemyAttacking = false; parryCanvas.style.display = 'none'; parryCanvas.style.pointerEvents = 'none'; }
-        function scheduleNextEnemyAttack() { setTimeout(() => { if (playerHp > 0) startEnemyAttack(); scheduleNextEnemyAttack(); }, Math.random() * 2500 + 2000); }
+        
+        // 確保攻擊頻率穩定 (2~4秒)
+        function scheduleNextEnemyAttack() { 
+            setTimeout(() => { 
+                if (playerHp > 0) startEnemyAttack(); 
+                scheduleNextEnemyAttack(); 
+            }, Math.random() * 2000 + 2000); 
+        }
 
         updateUI('player', false); updateUI('enemy', false); scheduleNextEnemyAttack();
     </script>

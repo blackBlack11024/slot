@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拉霸與格擋：點擊戰鬥</title>
+    <title>拉霸與格擋：動態戰鬥</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #222;
+            background-color: #1a1a1a;
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
@@ -19,13 +19,24 @@
             user-select: none;
         }
 
-        #game-ui {
+        #top-ui {
             width: 100%;
             max-width: 600px;
+            padding: 10px 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            background-color: #222;
+            border-bottom: 2px solid #444;
+        }
+
+        .hp-container {
             display: flex;
             justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
+            width: 100%;
+            margin-bottom: 15px;
         }
 
         .hp-box {
@@ -34,10 +45,12 @@
             border-radius: 8px;
             border: 2px solid #555;
             text-align: center;
+            flex: 1;
+            margin: 0 5px;
         }
 
         .hp-bar {
-            width: 150px;
+            width: 100%;
             height: 20px;
             background: #555;
             border-radius: 10px;
@@ -51,93 +64,119 @@
             width: 100%;
             transition: width 0.2s;
         }
-
         #enemy-hp-fill { background: #f44336; }
 
-        #slot-machine {
+        /* 拉霸機樣式 */
+        #slot-machine-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             background: #111;
             border: 3px solid #ffeb3b;
-            padding: 15px 30px;
+            padding: 10px 20px;
             border-radius: 10px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #ffeb3b;
-            margin: 20px 0;
-            text-shadow: 0 0 10px #ffeb3b;
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.3);
             cursor: pointer;
             transition: transform 0.1s;
         }
-
-        #slot-machine:active { transform: scale(0.95); }
-
-        #battle-area {
-            position: relative;
-            width: 400px;
-            height: 400px;
+        #slot-machine-container:active { transform: scale(0.98); }
+        
+        .slots {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
+            gap: 15px;
+            font-size: 40px;
+            margin-bottom: 10px;
+            background: #000;
+            padding: 10px;
+            border-radius: 8px;
+            border: inset 3px #555;
         }
-
-        #enemy {
-            width: 120px;
-            height: 120px;
-            background: #e91e63;
-            border-radius: 20px;
+        .slot-item {
+            width: 50px;
+            height: 50px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 20px;
+            background: #fff;
+            border-radius: 5px;
+        }
+        .slot-info {
+            color: #ffeb3b;
             font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 0 20px #e91e63;
-            transition: transform 0.05s;
-            z-index: 10;
+            font-size: 18px;
         }
 
-        #enemy:active { transform: scale(0.9); }
+        /* 戰鬥點擊區域 */
+        #battle-area {
+            flex-grow: 1;
+            width: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: crosshair;
+        }
+        #battle-area:active { background-color: rgba(255, 255, 255, 0.05); }
 
-        /* 格擋用的 Canvas，絕對定位覆蓋在敵人上方 */
+        .hint-text {
+            color: #555;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        /* 絕對定位的格擋 Canvas */
         #parry-canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 400px;
-            height: 400px;
-            pointer-events: none; /* 平時不阻擋點擊敵人 */
+            width: 160px;
+            height: 160px;
+            pointer-events: none;
+            display: none;
             z-index: 20;
-            display: none; /* 敵人攻擊時才顯示 */
+            border-radius: 50%;
+            /* background: rgba(255,0,0,0.2); 測試範圍用 */
         }
 
         #message {
-            margin-top: 20px;
-            font-size: 24px;
-            height: 30px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
             font-weight: bold;
+            pointer-events: none;
+            z-index: 30;
+            text-shadow: 2px 2px 4px #000;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-ui">
-        <div class="hp-box">
-            <div>玩家 HP</div>
-            <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
+    <div id="top-ui">
+        <div class="hp-container">
+            <div class="hp-box">
+                <div>玩家 HP</div>
+                <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
+            </div>
+            <div class="hp-box">
+                <div>敵人 HP</div>
+                <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+            </div>
         </div>
-        <div class="hp-box">
-            <div>敵人 HP</div>
-            <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+
+        <div id="slot-machine-container" onpointerdown="spinSlot()">
+            <div class="slots">
+                <div class="slot-item" id="slot1">🍒</div>
+                <div class="slot-item" id="slot2">🍒</div>
+                <div class="slot-item" id="slot3">🍒</div>
+            </div>
+            <div class="slot-info" id="slot-status">點擊拉霸！(目前倍率: x1)</div>
         </div>
     </div>
 
-    <!-- 點擊拉動拉霸機 -->
-    <div id="slot-machine" onclick="spinSlot()">點擊拉霸！(目前倍率: x1)</div>
-
-    <div id="battle-area">
-        <!-- 點擊敵人進行攻擊 -->
-        <div id="enemy" onclick="attackEnemy()">點擊攻擊</div>
-        <canvas id="parry-canvas" width="400" height="400"></canvas>
+    <div id="battle-area" onpointerdown="attackEnemy(event)">
+        <div class="hint-text">點擊此區域任意處進行攻擊</div>
+        <canvas id="parry-canvas" width="160" height="160"></canvas>
     </div>
 
     <div id="message"></div>
@@ -155,23 +194,29 @@
 
         // --- 格擋機制狀態 ---
         let isEnemyAttacking = false;
-        let parryRadius = 200;       // 光圈起始半徑
-        const targetRadius = 60;     // 目標圓形半徑
-        const tolerance = 15;        // 判定成功的誤差範圍
+        let parryRadius = 80;        // 光圈起始半徑 (配合 canvas 大小 160x160)
+        const targetRadius = 30;     // 目標圓形半徑
+        const tolerance = 12;        // 判定成功的誤差範圍
         let parryAnimationId;
 
         // --- DOM 元素 ---
         const playerHpFill = document.getElementById('player-hp-fill');
         const enemyHpFill = document.getElementById('enemy-hp-fill');
-        const slotMachine = document.getElementById('slot-machine');
+        const slotStatus = document.getElementById('slot-status');
+        const slot1 = document.getElementById('slot1');
+        const slot2 = document.getElementById('slot2');
+        const slot3 = document.getElementById('slot3');
+        const battleArea = document.getElementById('battle-area');
         const canvas = document.getElementById('parry-canvas');
         const ctx = canvas.getContext('2d');
         const msgDiv = document.getElementById('message');
 
+        const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
+
         function showMessage(msg, color) {
             msgDiv.innerText = msg;
             msgDiv.style.color = color;
-            setTimeout(() => { msgDiv.innerText = ""; }, 1000);
+            setTimeout(() => { msgDiv.innerText = ""; }, 800);
         }
 
         function updateUI() {
@@ -184,37 +229,54 @@
         function spinSlot() {
             if (isSpinning) return;
             isSpinning = true;
-            const multipliers = [1, 1, 2, 2, 3, 5, 10]; // 權重可以自己調
             let rolls = 0;
-            
-            slotMachine.innerText = "旋轉中...";
+            slotStatus.innerText = "旋轉中...";
             
             let interval = setInterval(() => {
-                let tempMulti = multipliers[Math.floor(Math.random() * multipliers.length)];
-                slotMachine.innerText = `旋轉中... x${tempMulti}`;
+                slot1.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                slot2.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                slot3.innerText = symbols[Math.floor(Math.random() * symbols.length)];
                 rolls++;
                 
-                if (rolls > 15) {
+                if (rolls > 20) {
                     clearInterval(interval);
-                    currentMultiplier = tempMulti;
-                    slotMachine.innerText = `點擊拉霸！(目前倍率: x${currentMultiplier})`;
-                    if (currentMultiplier >= 5) showMessage("大爆發！", "#ffeb3b");
+                    calculateSlotResult();
                     isSpinning = false;
                 }
-            }, 60);
+            }, 50);
+        }
+
+        function calculateSlotResult() {
+            let s1 = slot1.innerText;
+            let s2 = slot2.innerText;
+            let s3 = slot3.innerText;
+
+            if (s1 === s2 && s2 === s3) {
+                if (s1 === '7️⃣') currentMultiplier = 10;
+                else if (s1 === '💎') currentMultiplier = 5;
+                else currentMultiplier = 3;
+                showMessage("大爆發！", "#ffeb3b");
+            } else if (s1 === s2 || s2 === s3 || s1 === s3) {
+                currentMultiplier = 2; // 兩個一樣
+            } else {
+                currentMultiplier = 1; // 都沒中
+            }
+            
+            slotStatus.innerText = `點擊拉霸！(目前倍率: x${currentMultiplier})`;
         }
 
         // --- 玩家攻擊 ---
-        function attackEnemy() {
-            if (isEnemyAttacking) return; // 敵人攻擊中禁止一般點擊，避免誤觸
+        function attackEnemy(e) {
+            // 如果點擊目標是 canvas（格擋區），不觸發一般攻擊
+            if (e.target === canvas) return;
             
             let totalDamage = baseAttack * currentMultiplier;
             enemyHp -= totalDamage;
-            
             updateUI();
             
+            // 這裡可以加入點擊特效，目前先簡單讓 HP 歸零重置
             if (enemyHp <= 0) {
-                alert("你擊敗了敵人！");
+                showMessage("擊殺敵人！", "#03a9f4");
                 enemyHp = maxEnemyHp;
                 updateUI();
             }
@@ -224,46 +286,51 @@
         function startEnemyAttack() {
             if (isEnemyAttacking) return;
             isEnemyAttacking = true;
-            parryRadius = 200; // 重置光圈大小
+            parryRadius = 80; // 重置光圈大小
             
-            // 開啟 canvas 阻擋層，讓玩家這時候的點擊會觸發格擋判定
+            // 計算隨機位置 (確保在 battle-area 範圍內)
+            const areaRect = battleArea.getBoundingClientRect();
+            const maxX = areaRect.width - canvas.width;
+            const maxY = areaRect.height - canvas.height;
+            
+            // 防止生成在畫面外
+            let randomX = Math.max(0, Math.random() * maxX);
+            let randomY = Math.max(0, Math.random() * maxY);
+            
+            canvas.style.left = randomX + 'px';
+            canvas.style.top = randomY + 'px';
             canvas.style.display = 'block';
-            canvas.style.pointerEvents = 'auto'; 
+            canvas.style.pointerEvents = 'auto'; // 攔截點擊
             
-            showMessage("敵人準備攻擊！", "#ff9800");
             drawParry();
         }
 
         function drawParry() {
-            // 清除畫布
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
 
-            // 1. 畫出固定不動的「目標圓形」
+            // 目標圓形
             ctx.beginPath();
             ctx.arc(centerX, centerY, targetRadius, 0, Math.PI * 2);
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 4;
-            ctx.setLineDash([5, 5]); // 虛線效果
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // 2. 畫出由外而內縮小的「光圈」
+            // 動態縮小的光圈
             ctx.beginPath();
             ctx.arc(centerX, centerY, Math.max(0, parryRadius), 0, Math.PI * 2);
-            ctx.strokeStyle = '#00e676';
+            ctx.strokeStyle = '#e91e63'; // 敵人攻擊用紅色系
             ctx.lineWidth = 4;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00e676';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#e91e63';
             ctx.stroke();
-            ctx.shadowBlur = 0; // 畫完後重置陰影
+            ctx.shadowBlur = 0;
 
-            // 光圈收縮速度
-            parryRadius -= 2;
+            parryRadius -= 1.5; // 收縮速度
 
-            // 如果光圈縮小到 0 且玩家都沒點擊，視為格擋失敗
             if (parryRadius <= 0) {
                 failParry();
             } else {
@@ -271,42 +338,35 @@
             }
         }
 
-        // 玩家點擊畫布進行格擋判定
-        canvas.addEventListener('mousedown', () => {
+        // 玩家點擊畫布進行格擋
+        canvas.addEventListener('pointerdown', (e) => {
             if (!isEnemyAttacking) return;
             
-            // 計算目前光圈與目標圓形的半徑差距
             let diff = Math.abs(parryRadius - targetRadius);
             
             if (diff <= tolerance) {
                 successParry();
             } else {
-                // 點太早或點太晚
                 failParry();
             }
         });
 
         function successParry() {
             cancelAnimationFrame(parryAnimationId);
-            showMessage("Perfect Parry! 格擋成功！", "#00e676");
-            
-            // 這裡可以加入額外獎勵，例如反彈傷害給敵人
-            enemyHp -= baseAttack * 2; 
-            
+            showMessage("完美格擋！", "#00e676");
+            enemyHp -= baseAttack * 3; // 反擊傷害
             endEnemyAttack();
         }
 
         function failParry() {
             cancelAnimationFrame(parryAnimationId);
-            showMessage("格擋失敗！受傷！", "#f44336");
-            
+            showMessage("受到攻擊！", "#f44336");
             playerHp -= enemyDamage;
             if (playerHp <= 0) {
-                alert("你被擊敗了！重新開始。");
+                alert("你被擊敗了！");
                 playerHp = maxPlayerHp;
                 enemyHp = maxEnemyHp;
             }
-            
             endEnemyAttack();
         }
 
@@ -318,10 +378,9 @@
             updateUI();
         }
 
-        // --- 遊戲迴圈：定時觸發敵人攻擊 ---
-        // 每隔 4 到 8 秒敵人會隨機發起一次攻擊
+        // --- 遊戲迴圈 ---
         function scheduleNextEnemyAttack() {
-            let delay = Math.random() * 4000 + 4000;
+            let delay = Math.random() * 3000 + 2000; // 2~5秒隨機攻擊
             setTimeout(() => {
                 if (playerHp > 0) {
                     startEnemyAttack();

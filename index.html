@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拉霸與格擋：動態戰鬥</title>
+    <title>拉霸與格擋：動態戰鬥 (增強打擊感版)</title>
     <style>
         body {
             margin: 0;
@@ -47,6 +47,16 @@
             text-align: center;
             flex: 1;
             margin: 0 5px;
+            transition: transform 0.05s ease-out; /* 用於受傷脈動 */
+        }
+
+        /* 受傷閃紅動畫 */
+        @keyframes damageFlash {
+            0% { border-color: #f44336; box-shadow: 0 0 15px #f44336; }
+            100% { border-color: #555; box-shadow: none; }
+        }
+        .hp-box.damaged {
+            animation: damageFlash 0.15s ease-out;
         }
 
         .hp-bar {
@@ -62,7 +72,7 @@
             height: 100%;
             background: #4caf50;
             width: 100%;
-            transition: width 0.2s;
+            transition: width 0.15s ease-out; /* 加快血條變化速度 */
         }
         #enemy-hp-fill { background: #f44336; }
 
@@ -75,7 +85,7 @@
             border: 3px solid #ffeb3b;
             padding: 10px 20px;
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(255, 235, 59, 0.3);
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.2);
             cursor: pointer;
             transition: transform 0.1s;
         }
@@ -116,7 +126,6 @@
             align-items: center;
             cursor: crosshair;
         }
-        #battle-area:active { background-color: rgba(255, 255, 255, 0.05); }
 
         .hint-text {
             color: #555;
@@ -134,7 +143,17 @@
             display: none;
             z-index: 20;
             border-radius: 50%;
-            /* background: rgba(255,0,0,0.2); 測試範圍用 */
+        }
+
+        /* 打擊特效 Canvas */
+        #vfx-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 平時不阻擋點擊，僅用於顯示特效 */
+            z-index: 25;
         }
 
         #message {
@@ -154,11 +173,11 @@
 
     <div id="top-ui">
         <div class="hp-container">
-            <div class="hp-box">
+            <div class="hp-box" id="player-hp-box">
                 <div>玩家 HP</div>
                 <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
             </div>
-            <div class="hp-box">
+            <div class="hp-box" id="enemy-hp-box">
                 <div>敵人 HP</div>
                 <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
             </div>
@@ -176,8 +195,12 @@
 
     <div id="battle-area" onpointerdown="attackEnemy(event)">
         <div class="hint-text">點擊此區域任意處進行攻擊</div>
+        <!-- 格擋 Canvas 會隨機出現在這區塊內 -->
         <canvas id="parry-canvas" width="160" height="160"></canvas>
     </div>
+    
+    <!-- 用於繪製全螢幕打擊特效和傷害數字的畫布 -->
+    <canvas id="vfx-canvas"></canvas>
 
     <div id="message"></div>
 
@@ -194,12 +217,14 @@
 
         // --- 格擋機制狀態 ---
         let isEnemyAttacking = false;
-        let parryRadius = 80;        // 光圈起始半徑 (配合 canvas 大小 160x160)
+        let parryRadius = 80;        // 光圈起始半徑
         const targetRadius = 30;     // 目標圓形半徑
         const tolerance = 12;        // 判定成功的誤差範圍
         let parryAnimationId;
 
         // --- DOM 元素 ---
+        const playerHpBox = document.getElementById('player-hp-box');
+        const enemyHpBox = document.getElementById('enemy-hp-box');
         const playerHpFill = document.getElementById('player-hp-fill');
         const enemyHpFill = document.getElementById('enemy-hp-fill');
         const slotStatus = document.getElementById('slot-status');
@@ -207,11 +232,21 @@
         const slot2 = document.getElementById('slot2');
         const slot3 = document.getElementById('slot3');
         const battleArea = document.getElementById('battle-area');
-        const canvas = document.getElementById('parry-canvas');
-        const ctx = canvas.getContext('2d');
+        const parryCanvas = document.getElementById('parry-canvas');
+        const parryCtx = parryCanvas.getContext('2d');
+        const vfxCanvas = document.getElementById('vfx-canvas');
+        const vfxCtx = vfxCanvas.getContext('2d');
         const msgDiv = document.getElementById('message');
 
         const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
+
+        // 初始化全螢幕 VFX Canvas 大小
+        function resizeVfxCanvas() {
+            vfxCanvas.width = window.innerWidth;
+            vfxCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeVfxCanvas);
+        resizeVfxCanvas();
 
         function showMessage(msg, color) {
             msgDiv.innerText = msg;
@@ -219,10 +254,122 @@
             setTimeout(() => { msgDiv.innerText = ""; }, 800);
         }
 
-        function updateUI() {
-            playerHpFill.style.width = Math.max(0, (playerHp / maxPlayerHp) * 100) + '%';
-            enemyHpFill.style.width = Math.max(0, (enemyHp / maxEnemyHp) * 100) + '%';
+        // --- 打擊感增強：HP 變化特效 ---
+        function updateUI(target, isDamaged) {
+            if (target === 'player') {
+                playerHpFill.style.width = Math.max(0, (playerHp / maxPlayerHp) * 100) + '%';
+                if (isDamaged) {
+                    playerHpBox.classList.add('damaged');
+                    setTimeout(() => playerHpBox.classList.remove('damaged'), 150);
+                }
+            } else if (target === 'enemy') {
+                enemyHpFill.style.width = Math.max(0, (enemyHp / maxEnemyHp) * 100) + '%';
+                if (isDamaged) {
+                    enemyHpBox.classList.add('damaged');
+                    // 敵人 HP 脈動效果
+                    enemyHpBox.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        enemyHpBox.classList.remove('damaged');
+                        enemyHpBox.style.transform = 'scale(1)';
+                    }, 150);
+                }
+            }
         }
+
+        // --- 打擊感增強：視覺特效與傷害數字 ---
+        let particles = [];
+        let damageNumbers = [];
+
+        function addVfx(x, y, type) {
+            if (type === 'hit') {
+                // 黃色斬擊粒子
+                for (let i = 0; i < 10; i++) {
+                    particles.push({
+                        x: x, y: y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        size: Math.random() * 5 + 2,
+                        color: '#ffeb3b',
+                        alpha: 1,
+                        decay: 0.05
+                    });
+                }
+            } else if (type === 'parry') {
+                // 完美格擋shockwave
+                particles.push({
+                    x: x, y: y,
+                    type: 'shockwave',
+                    size: 20,
+                    color: '#00e676',
+                    alpha: 1,
+                    decay: 0.03
+                });
+                for (let i = 0; i < 20; i++) {
+                     particles.push({
+                        x: x, y: y,
+                        vx: (Math.random() - 0.5) * 15,
+                        vy: (Math.random() - 0.5) * 15,
+                        size: Math.random() * 6 + 3,
+                        color: '#b2ff59',
+                        alpha: 1,
+                        decay: 0.04
+                    });
+                }
+            }
+        }
+
+        function addDamageNumber(x, y, damage, multiplier) {
+            damageNumbers.push({
+                x: x, y: y - 20,
+                damage: damage,
+                multiplier: multiplier,
+                vy: -2, // 向上漂浮
+                alpha: 1,
+                decay: 0.02
+            });
+        }
+
+        function updateVfx() {
+            vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
+
+            // 更新與繪製粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                if (p.type === 'shockwave') {
+                    p.size += 5;
+                    p.alpha -= p.decay;
+                    vfxCtx.beginPath();
+                    vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`;
+                    vfxCtx.lineWidth = 4;
+                    vfxCtx.stroke();
+                } else {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= p.decay;
+                    vfxCtx.beginPath();
+                    vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    vfxCtx.fillStyle = `rgba(255, 235, 59, ${p.alpha})`;
+                    vfxCtx.fill();
+                }
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // 更新與繪製傷害數字
+            for (let i = damageNumbers.length - 1; i >= 0; i--) {
+                let d = damageNumbers[i];
+                d.y += d.vy;
+                d.alpha -= d.decay;
+                vfxCtx.font = 'bold 30px Arial';
+                vfxCtx.fillStyle = `rgba(244, 67, 54, ${d.alpha})`; // 紅色
+                vfxCtx.fillText(`-${d.damage}x${d.multiplier}`, d.x, d.y);
+                
+                if (d.alpha <= 0) damageNumbers.splice(i, 1);
+            }
+
+            requestAnimationFrame(updateVfx);
+        }
+        updateVfx();
 
         // --- 拉霸機系統 ---
         let isSpinning = false;
@@ -268,17 +415,20 @@
         // --- 玩家攻擊 ---
         function attackEnemy(e) {
             // 如果點擊目標是 canvas（格擋區），不觸發一般攻擊
-            if (e.target === canvas) return;
+            if (e.target === parryCanvas) return;
             
+            // 加入打擊特效和數字
+            addVfx(e.clientX, e.clientY, 'hit');
             let totalDamage = baseAttack * currentMultiplier;
-            enemyHp -= totalDamage;
-            updateUI();
+            addDamageNumber(e.clientX, e.clientY, totalDamage, currentMultiplier);
             
-            // 這裡可以加入點擊特效，目前先簡單讓 HP 歸零重置
+            enemyHp -= totalDamage;
+            updateUI('enemy', true);
+            
             if (enemyHp <= 0) {
                 showMessage("擊殺敵人！", "#03a9f4");
                 enemyHp = maxEnemyHp;
-                updateUI();
+                updateUI('enemy', false);
             }
         }
 
@@ -288,46 +438,44 @@
             isEnemyAttacking = true;
             parryRadius = 80; // 重置光圈大小
             
-            // 計算隨機位置 (確保在 battle-area 範圍內)
             const areaRect = battleArea.getBoundingClientRect();
-            const maxX = areaRect.width - canvas.width;
-            const maxY = areaRect.height - canvas.height;
+            const maxX = areaRect.width - parryCanvas.width;
+            const maxY = areaRect.height - parryCanvas.height;
             
-            // 防止生成在畫面外
             let randomX = Math.max(0, Math.random() * maxX);
             let randomY = Math.max(0, Math.random() * maxY);
             
-            canvas.style.left = randomX + 'px';
-            canvas.style.top = randomY + 'px';
-            canvas.style.display = 'block';
-            canvas.style.pointerEvents = 'auto'; // 攔截點擊
+            parryCanvas.style.left = randomX + 'px';
+            parryCanvas.style.top = randomY + 'px';
+            parryCanvas.style.display = 'block';
+            parryCanvas.style.pointerEvents = 'auto'; // 攔截點擊
             
             drawParry();
         }
 
         function drawParry() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
+            parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
+            const centerX = parryCanvas.width / 2;
+            const centerY = parryCanvas.height / 2;
 
             // 目標圓形
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, targetRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            parryCtx.beginPath();
+            parryCtx.arc(centerX, centerY, targetRadius, 0, Math.PI * 2);
+            parryCtx.strokeStyle = '#fff';
+            parryCtx.lineWidth = 3;
+            parryCtx.setLineDash([5, 5]);
+            parryCtx.stroke();
+            parryCtx.setLineDash([]);
 
             // 動態縮小的光圈
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, Math.max(0, parryRadius), 0, Math.PI * 2);
-            ctx.strokeStyle = '#e91e63'; // 敵人攻擊用紅色系
-            ctx.lineWidth = 4;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#e91e63';
-            ctx.stroke();
-            ctx.shadowBlur = 0;
+            parryCtx.beginPath();
+            parryCtx.arc(centerX, centerY, Math.max(0, parryRadius), 0, Math.PI * 2);
+            parryCtx.strokeStyle = '#e91e63'; // 紅色系
+            parryCtx.lineWidth = 4;
+            parryCtx.shadowBlur = 10;
+            parryCtx.shadowColor = '#e91e63';
+            parryCtx.stroke();
+            parryCtx.shadowBlur = 0;
 
             parryRadius -= 1.5; // 收縮速度
 
@@ -339,43 +487,55 @@
         }
 
         // 玩家點擊畫布進行格擋
-        canvas.addEventListener('pointerdown', (e) => {
+        parryCanvas.addEventListener('pointerdown', (e) => {
             if (!isEnemyAttacking) return;
             
             let diff = Math.abs(parryRadius - targetRadius);
             
             if (diff <= tolerance) {
-                successParry();
+                successParry(e);
             } else {
                 failParry();
             }
         });
 
-        function successParry() {
+        function successParry(e) {
             cancelAnimationFrame(parryAnimationId);
             showMessage("完美格擋！", "#00e676");
-            enemyHp -= baseAttack * 3; // 反擊傷害
+            
+            // 完美格擋特效：在點擊位置加入電光 shockwave
+            const canvasRect = parryCanvas.getBoundingClientRect();
+            addVfx(canvasRect.left + parryCanvas.width / 2, canvasRect.top + parryCanvas.height / 2, 'parry');
+            
+            // 反擊傷害
+            enemyHp -= baseAttack * 3; 
+            updateUI('enemy', true);
+            
             endEnemyAttack();
         }
 
         function failParry() {
             cancelAnimationFrame(parryAnimationId);
             showMessage("受到攻擊！", "#f44336");
+            
             playerHp -= enemyDamage;
+            updateUI('player', true); // 玩家血條閃紅震動
+            
             if (playerHp <= 0) {
                 alert("你被擊敗了！");
                 playerHp = maxPlayerHp;
                 enemyHp = maxEnemyHp;
+                updateUI('player', false);
+                updateUI('enemy', false);
             }
             endEnemyAttack();
         }
 
         function endEnemyAttack() {
             isEnemyAttacking = false;
-            canvas.style.display = 'none';
-            canvas.style.pointerEvents = 'none';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            updateUI();
+            parryCanvas.style.display = 'none';
+            parryCanvas.style.pointerEvents = 'none';
+            parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
         }
 
         // --- 遊戲迴圈 ---
@@ -390,7 +550,8 @@
         }
 
         // 初始化
-        updateUI();
+        updateUI('player', false);
+        updateUI('enemy', false);
         scheduleNextEnemyAttack();
 
     </script>

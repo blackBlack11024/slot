@@ -6,179 +6,109 @@
     <title>拉霸與格擋：極致打擊感版</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #111;
-            color: #fff;
+            margin: 0; padding: 0;
+            background-color: #111; color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            user-select: none;
+            overflow: hidden; user-select: none;
         }
 
-        /* 遊戲主要容器，用於整體震動 */
         #game-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; width: 100vw; position: relative;
         }
 
-        /* --- 畫面震動動畫 --- */
-        @keyframes shake-light {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            20% { transform: translate(-2px, -1px) rotate(-1deg); }
-            40% { transform: translate(1px, 2px) rotate(1deg); }
-            60% { transform: translate(-1px, 1px) rotate(0deg); }
-            80% { transform: translate(2px, -1px) rotate(-1deg); }
-            100% { transform: translate(0px, 0px) rotate(0deg); }
-        }
-        @keyframes shake-heavy {
-            0% { transform: translate(3px, 3px) rotate(0deg); }
-            10% { transform: translate(-4px, -3px) rotate(-2deg); }
-            20% { transform: translate(2px, 5px) rotate(2deg); }
-            30% { transform: translate(-5px, 2px) rotate(-1deg); }
-            40% { transform: translate(4px, -4px) rotate(1deg); }
-            50% { transform: translate(-3px, 4px) rotate(-2deg); }
-            60% { transform: translate(5px, 1px) rotate(2deg); }
-            70% { transform: translate(-2px, -5px) rotate(-1deg); }
-            80% { transform: translate(3px, 3px) rotate(1deg); }
-            90% { transform: translate(-4px, 2px) rotate(0deg); }
-            100% { transform: translate(0px, 0px) rotate(0deg); }
-        }
+        /* 畫面震動 */
+        @keyframes shake-micro { 0% {transform: translate(0px, 1px)} 50% {transform: translate(0px, -1px)} 100% {transform: translate(0px, 0px)} }
+        @keyframes shake-light { 0% { transform: translate(1px, 1px) } 25% { transform: translate(-2px, -1px) } 50% { transform: translate(1px, 2px) } 75% { transform: translate(-1px, 1px) } 100% { transform: translate(0px, 0px) } }
+        @keyframes shake-heavy { 0% { transform: translate(4px, 4px) rotate(1deg); } 25% { transform: translate(-5px, -3px) rotate(-1deg); } 50% { transform: translate(3px, 6px) rotate(2deg); } 75% { transform: translate(-6px, 2px) rotate(-2deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
+        .shake-micro { animation: shake-micro 0.1s ease-out; }
         .shake-light { animation: shake-light 0.15s ease-out; }
         .shake-heavy { animation: shake-heavy 0.3s ease-out; }
 
-        /* 全螢幕閃白特效 */
         #flash-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: white;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 100;
-            transition: opacity 0.05s ease-out;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: white; opacity: 0; pointer-events: none;
+            z-index: 100; transition: opacity 0.05s ease-out;
         }
 
         #top-ui {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px 20px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 10;
-            background-color: rgba(34, 34, 34, 0.9);
-            border-bottom: 2px solid #444;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            width: 100%; max-width: 600px; padding: 10px 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center;
+            z-index: 10; background-color: rgba(34, 34, 34, 0.9);
+            border-bottom: 2px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        .hp-container {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-bottom: 15px;
-        }
-
-        .hp-box {
-            background: #2a2a2a;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 2px solid #555;
-            text-align: center;
-            flex: 1;
-            margin: 0 5px;
-            transition: transform 0.05s ease-out;
-        }
-
-        @keyframes damageFlash {
-            0% { border-color: #ff1744; box-shadow: 0 0 20px #ff1744; background: #5a0000; }
-            100% { border-color: #555; box-shadow: none; background: #2a2a2a; }
-        }
+        .hp-container { display: flex; justify-content: space-between; width: 100%; margin-bottom: 15px; }
+        .hp-box { background: #2a2a2a; padding: 10px 20px; border-radius: 8px; border: 2px solid #555; text-align: center; flex: 1; margin: 0 5px; transition: transform 0.05s ease-out; }
+        @keyframes damageFlash { 0% { border-color: #ff1744; box-shadow: 0 0 20px #ff1744; background: #5a0000; } 100% { border-color: #555; box-shadow: none; background: #2a2a2a; } }
         .hp-box.damaged { animation: damageFlash 0.2s ease-out; }
-
-        .hp-bar {
-            width: 100%;
-            height: 20px;
-            background: #111;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 5px;
-            border: 1px inset #333;
-        }
-
-        .hp-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4caf50, #81c784);
-            width: 100%;
-            transition: width 0.1s ease-out;
-        }
+        .hp-bar { width: 100%; height: 20px; background: #111; border-radius: 10px; overflow: hidden; margin-top: 5px; border: 1px inset #333; }
+        .hp-fill { height: 100%; background: linear-gradient(90deg, #4caf50, #81c784); width: 100%; transition: width 0.1s ease-out; }
         #enemy-hp-fill { background: linear-gradient(90deg, #d50000, #ff5252); }
 
-        /* 拉霸機 */
+        /* --- 拉霸機全新樣式與特效 --- */
         #slot-machine-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center;
             background: linear-gradient(145deg, #1a1a1a, #000);
-            border: 3px solid #ffeb3b;
-            padding: 10px 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(255, 235, 59, 0.4);
-            cursor: pointer;
-            transition: transform 0.05s;
+            border: 3px solid #ffeb3b; padding: 10px 20px; border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.4); cursor: pointer; transition: transform 0.05s;
         }
         #slot-machine-container:active { transform: scale(0.95); }
         
         .slots {
-            display: flex;
-            gap: 15px;
-            font-size: 40px;
-            margin-bottom: 5px;
-            background: #000;
-            padding: 10px;
-            border-radius: 8px;
-            border: inset 3px #444;
+            display: flex; gap: 15px; font-size: 40px; margin-bottom: 5px;
+            background: #050505; padding: 10px; border-radius: 8px;
+            border: inset 4px #444; position: relative; overflow: hidden;
         }
+        
         .slot-item {
-            width: 50px; height: 50px;
-            display: flex; justify-content: center; align-items: center;
-            background: #fff; border-radius: 5px;
+            width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;
+            background: #fff; border-radius: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.1s;
         }
-        .slot-info { color: #ffeb3b; font-weight: bold; font-size: 18px; text-shadow: 0 0 5px #ffeb3b; }
+
+        /* 高速旋轉狀態：模糊、垂直拉伸 */
+        .slot-item.spinning {
+            filter: blur(1.5px) contrast(1.2);
+            transform: scaleY(1.4);
+            color: #888;
+        }
+
+        /* 鎖定彈跳特效 */
+        @keyframes lock-in-pop {
+            0% { transform: scale(1.4); filter: brightness(2); }
+            50% { transform: scale(0.9); filter: brightness(1.5); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .slot-item.locked {
+            animation: lock-in-pop 0.25s ease-out forwards;
+        }
+
+        /* 聽牌暴走特效 */
+        @keyframes tension-shake {
+            0% { transform: translateY(-3px) scaleY(1.5); }
+            50% { transform: translateY(3px) scaleY(1.5); }
+            100% { transform: translateY(-3px) scaleY(1.5); }
+        }
+        .slot-item.tension {
+            animation: tension-shake 0.05s infinite;
+            filter: blur(2px) brightness(1.5);
+            color: #ff1744;
+            box-shadow: inset 0 0 20px #ff1744;
+            background: #ffebee;
+        }
+
+        .slot-info { color: #ffeb3b; font-weight: bold; font-size: 18px; text-shadow: 0 0 5px #ffeb3b; transition: color 0.2s;}
+        .slot-info.highlight { color: #ff1744; text-shadow: 0 0 15px #ff1744; font-size: 20px;}
 
         /* 戰鬥區 */
-        #battle-area {
-            flex-grow: 1;
-            width: 100%;
-            position: relative;
-            display: flex; justify-content: center; align-items: center;
-            cursor: crosshair;
-        }
-
-        .hint-text {
-            color: #444; font-size: 28px; font-weight: bold;
-            pointer-events: none; text-shadow: 1px 1px 2px #000;
-        }
-
-        #parry-canvas {
-            position: absolute;
-            width: 180px; height: 180px;
-            pointer-events: none; display: none; z-index: 20;
-        }
-
-        #vfx-canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 25;
-        }
-
+        #battle-area { flex-grow: 1; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; cursor: crosshair; }
+        .hint-text { color: #444; font-size: 28px; font-weight: bold; pointer-events: none; text-shadow: 1px 1px 2px #000; }
+        #parry-canvas { position: absolute; width: 180px; height: 180px; pointer-events: none; display: none; z-index: 20; }
+        #vfx-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 25; }
         #message {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 40px; font-weight: 900; font-style: italic;
-            pointer-events: none; z-index: 30;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 40px; font-weight: 900; font-style: italic; pointer-events: none; z-index: 30;
             text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
     </style>
@@ -206,7 +136,7 @@
                     <div class="slot-item" id="slot2">🍒</div>
                     <div class="slot-item" id="slot3">🍒</div>
                 </div>
-                <div class="slot-info" id="slot-status">點擊拉霸！(倍率: x1)</div>
+                <div class="slot-info" id="slot-status">點擊啟動拉霸機！</div>
             </div>
         </div>
 
@@ -249,26 +179,21 @@
 
         const symbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
 
-        // --- 初始化畫布 ---
-        function resizeVfxCanvas() {
-            vfxCanvas.width = window.innerWidth;
-            vfxCanvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeVfxCanvas);
-        resizeVfxCanvas();
+        // --- 初始化 ---
+        function resizeVfxCanvas() { vfxCanvas.width = window.innerWidth; vfxCanvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeVfxCanvas); resizeVfxCanvas();
 
         // --- 特效函數 ---
         function showMessage(msg, color) {
-            msgDiv.innerText = msg;
-            msgDiv.style.color = color;
-            msgDiv.style.transform = `translate(-50%, -50%) scale(1.2)`;
+            msgDiv.innerText = msg; msgDiv.style.color = color;
+            msgDiv.style.transform = `translate(-50%, -50%) scale(1.3)`;
             setTimeout(() => msgDiv.style.transform = `translate(-50%, -50%) scale(1)`, 50);
             setTimeout(() => { msgDiv.innerText = ""; }, 600);
         }
 
         function triggerShake(intensity = 'light') {
-            container.classList.remove('shake-light', 'shake-heavy');
-            void container.offsetWidth; // 強制重繪
+            container.classList.remove('shake-micro', 'shake-light', 'shake-heavy');
+            void container.offsetWidth; 
             container.classList.add(`shake-${intensity}`);
         }
 
@@ -280,315 +205,223 @@
         function updateUI(target, isDamaged) {
             if (target === 'player') {
                 playerHpFill.style.width = Math.max(0, (playerHp / maxPlayerHp) * 100) + '%';
-                if (isDamaged) {
-                    playerHpBox.classList.add('damaged');
-                    setTimeout(() => playerHpBox.classList.remove('damaged'), 200);
-                }
+                if (isDamaged) { playerHpBox.classList.add('damaged'); setTimeout(() => playerHpBox.classList.remove('damaged'), 200); }
             } else if (target === 'enemy') {
                 enemyHpFill.style.width = Math.max(0, (enemyHp / maxEnemyHp) * 100) + '%';
                 if (isDamaged) {
-                    enemyHpBox.classList.add('damaged');
-                    enemyHpBox.style.transform = 'scale(1.1)';
-                    setTimeout(() => {
-                        enemyHpBox.classList.remove('damaged');
-                        enemyHpBox.style.transform = 'scale(1)';
-                    }, 100);
+                    enemyHpBox.classList.add('damaged'); enemyHpBox.style.transform = 'scale(1.1)';
+                    setTimeout(() => { enemyHpBox.classList.remove('damaged'); enemyHpBox.style.transform = 'scale(1)'; }, 100);
                 }
             }
         }
 
-        // --- 視覺特效 (VFX) 系統 ---
-        let particles = [];
-        let damageNumbers = [];
-        let slashes = []; // 斬擊刀光
-
+        // --- 視覺特效 (VFX) ---
+        let particles = [], damageNumbers = [], slashes = [];
         function addVfx(x, y, type) {
             if (type === 'hit') {
-                // 產生刀光
-                let angle = Math.random() * Math.PI * 2;
-                slashes.push({
-                    x: x, y: y,
-                    angle: angle,
-                    length: 100 + Math.random() * 80,
-                    alpha: 1,
-                    decay: 0.1
-                });
-
-                // 產生帶重力的火花粒子
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI * 2, length: 100 + Math.random() * 80, alpha: 1, decay: 0.1 });
                 for (let i = 0; i < 12; i++) {
                     particles.push({
-                        x: x, y: y,
-                        vx: (Math.random() - 0.5) * 15,
-                        vy: (Math.random() - 0.5) * 15 - 5, // 初始向上噴
-                        gravity: 0.8,
-                        size: Math.random() * 6 + 2,
-                        color: currentMultiplier >= 5 ? '#00e5ff' : '#ffeb3b', // 高倍率變藍火花
-                        alpha: 1,
-                        decay: 0.03 + Math.random() * 0.03
+                        x: x, y: y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15 - 5,
+                        gravity: 0.8, size: Math.random() * 6 + 2, color: currentMultiplier >= 5 ? '#00e5ff' : '#ffeb3b', alpha: 1, decay: 0.03 + Math.random() * 0.03
                     });
                 }
             } else if (type === 'parry') {
-                // 完美格擋光圈
                 particles.push({ x: x, y: y, type: 'shockwave', size: 10, color: '#00e676', alpha: 1, decay: 0.04 });
                 for (let i = 0; i < 30; i++) {
-                     particles.push({
-                        x: x, y: y,
-                        vx: (Math.random() - 0.5) * 25, vy: (Math.random() - 0.5) * 25,
-                        gravity: 0, size: Math.random() * 8 + 4,
-                        color: '#b2ff59', alpha: 1, decay: 0.05
-                    });
+                     particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 25, vy: (Math.random() - 0.5) * 25, gravity: 0, size: Math.random() * 8 + 4, color: '#b2ff59', alpha: 1, decay: 0.05 });
                 }
             }
         }
 
         function addDamageNumber(x, y, damage, multiplier) {
             damageNumbers.push({
-                x: x + (Math.random() - 0.5) * 40, 
-                y: y - 20,
-                damage: damage,
-                multiplier: multiplier,
-                vx: (Math.random() - 0.5) * 2,
-                vy: -6 - Math.random() * 4, // 初始向上彈
-                gravity: 0.4,
-                alpha: 1.5, // 延長顯示時間
-                scale: multiplier >= 5 ? 1.5 : 1 // 高倍率數字變大
+                x: x + (Math.random() - 0.5) * 40, y: y - 20, damage: damage, multiplier: multiplier,
+                vx: (Math.random() - 0.5) * 2, vy: -6 - Math.random() * 4, gravity: 0.4, alpha: 1.5, scale: multiplier >= 5 ? 1.5 : 1
             });
         }
 
         function updateVfx() {
             vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
-
-            // 繪製刀光
             for (let i = slashes.length - 1; i >= 0; i--) {
-                let s = slashes[i];
-                s.alpha -= s.decay;
-                
-                vfxCtx.save();
-                vfxCtx.translate(s.x, s.y);
-                vfxCtx.rotate(s.angle);
-                vfxCtx.beginPath();
-                vfxCtx.moveTo(-s.length/2, 0);
-                vfxCtx.lineTo(s.length/2, 0);
-                vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`;
-                vfxCtx.lineWidth = 4 + s.alpha * 4;
-                vfxCtx.shadowBlur = 10;
-                vfxCtx.shadowColor = '#fff';
-                vfxCtx.stroke();
+                let s = slashes[i]; s.alpha -= s.decay;
+                vfxCtx.save(); vfxCtx.translate(s.x, s.y); vfxCtx.rotate(s.angle);
+                vfxCtx.beginPath(); vfxCtx.moveTo(-s.length/2, 0); vfxCtx.lineTo(s.length/2, 0);
+                vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; vfxCtx.lineWidth = 4 + s.alpha * 4; vfxCtx.shadowBlur = 10; vfxCtx.shadowColor = '#fff'; vfxCtx.stroke();
                 vfxCtx.restore();
-
                 if (s.alpha <= 0) slashes.splice(i, 1);
             }
-
-            // 繪製粒子
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 if (p.type === 'shockwave') {
                     p.size += 8; p.alpha -= p.decay;
-                    vfxCtx.beginPath();
-                    vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`;
-                    vfxCtx.lineWidth = 6;
-                    vfxCtx.stroke();
+                    vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`; vfxCtx.lineWidth = 6; vfxCtx.stroke();
                 } else {
-                    p.vy += p.gravity; // 套用重力
-                    p.x += p.vx; p.y += p.vy;
-                    p.alpha -= p.decay;
-                    vfxCtx.beginPath();
-                    vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    vfxCtx.fillStyle = p.color;
-                    vfxCtx.globalAlpha = Math.max(0, p.alpha);
-                    vfxCtx.fill();
-                    vfxCtx.globalAlpha = 1;
+                    p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+                    vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1;
                 }
                 if (p.alpha <= 0) particles.splice(i, 1);
             }
-
-            // 繪製傷害數字
             for (let i = damageNumbers.length - 1; i >= 0; i--) {
-                let d = damageNumbers[i];
-                d.vy += d.gravity; // 數字也會往下掉
-                d.x += d.vx; d.y += d.vy;
-                d.alpha -= 0.03;
-                
-                vfxCtx.save();
-                vfxCtx.translate(d.x, d.y);
-                vfxCtx.scale(d.scale, d.scale);
-                vfxCtx.font = '900 36px Arial';
-                vfxCtx.fillStyle = `rgba(255, 60, 60, ${Math.min(1, d.alpha)})`;
-                vfxCtx.strokeStyle = `rgba(0, 0, 0, ${Math.min(1, d.alpha)})`;
-                vfxCtx.lineWidth = 4;
-                let text = `-${d.damage}`;
-                if (d.multiplier > 1) text += `(x${d.multiplier})`;
-                vfxCtx.strokeText(text, 0, 0);
-                vfxCtx.fillText(text, 0, 0);
-                vfxCtx.restore();
-                
+                let d = damageNumbers[i]; d.vy += d.gravity; d.x += d.vx; d.y += d.vy; d.alpha -= 0.03;
+                vfxCtx.save(); vfxCtx.translate(d.x, d.y); vfxCtx.scale(d.scale, d.scale);
+                vfxCtx.font = '900 36px Arial'; vfxCtx.fillStyle = `rgba(255, 60, 60, ${Math.min(1, d.alpha)})`; vfxCtx.strokeStyle = `rgba(0, 0, 0, ${Math.min(1, d.alpha)})`; vfxCtx.lineWidth = 4;
+                let text = `-${d.damage}` + (d.multiplier > 1 ? `(x${d.multiplier})` : "");
+                vfxCtx.strokeText(text, 0, 0); vfxCtx.fillText(text, 0, 0); vfxCtx.restore();
                 if (d.alpha <= 0) damageNumbers.splice(i, 1);
             }
-
             requestAnimationFrame(updateVfx);
         }
         updateVfx();
 
-        // --- 拉霸機系統 ---
+        // --- 全新拉霸機系統 (Juicy Version) ---
         let isSpinning = false;
         function spinSlot() {
             if (isSpinning) return;
             isSpinning = true;
-            let rolls = 0;
-            slotStatus.innerText = "旋轉中...";
+            slotStatus.innerText = "🌀 旋轉中... 🌀";
+            slotStatus.classList.remove('highlight');
             
-            let interval = setInterval(() => {
-                slots.forEach(s => s.innerText = symbols[Math.floor(Math.random() * symbols.length)]);
-                rolls++;
-                if (rolls > 15) {
-                    clearInterval(interval);
-                    calcSlot();
-                    isSpinning = false;
+            // 初始化狀態：移除鎖定與聽牌特效，加入旋轉模糊
+            slots.forEach(s => {
+                s.classList.remove('locked', 'tension');
+                s.classList.add('spinning');
+            });
+
+            // 提前決定這輪的結果 (為了計算是否觸發聽牌)
+            let resultSymbols = [
+                symbols[Math.floor(Math.random() * symbols.length)],
+                symbols[Math.floor(Math.random() * symbols.length)],
+                symbols[Math.floor(Math.random() * symbols.length)]
+            ];
+
+            // 視覺上讓它狂轉
+            let spinState = [true, true, true];
+            let visualSpinInterval = setInterval(() => {
+                if(spinState[0]) slots[0].innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                if(spinState[1]) slots[1].innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                if(spinState[2]) slots[2].innerText = symbols[Math.floor(Math.random() * symbols.length)];
+            }, 40);
+
+            // 第一格煞車 (0.6秒)
+            setTimeout(() => {
+                spinState[0] = false; 
+                slots[0].innerText = resultSymbols[0];
+                slots[0].classList.remove('spinning'); slots[0].classList.add('locked');
+                triggerShake('micro'); // 輕微喀一聲的感覺
+            }, 600);
+
+            // 第二格煞車 (1.2秒)
+            setTimeout(() => {
+                spinState[1] = false; 
+                slots[1].innerText = resultSymbols[1];
+                slots[1].classList.remove('spinning'); slots[1].classList.add('locked');
+                triggerShake('micro');
+
+                // 判斷是否觸發「聽牌」特效 (前兩格一樣，且是大獎)
+                let tensionDelay = 600; // 預設第三格0.6秒後停
+                let isTension = (resultSymbols[0] === resultSymbols[1] && (resultSymbols[0] === '7️⃣' || resultSymbols[0] === '💎'));
+
+                if (isTension) {
+                    tensionDelay = 2000; // 延長旋轉時間營造緊張感
+                    slots[2].classList.remove('spinning');
+                    slots[2].classList.add('tension'); // 加上血紅震動特效
+                    slotStatus.innerText = "⚠️ 聽牌！要中了嗎？！ ⚠️";
+                    slotStatus.classList.add('highlight');
                 }
-            }, 60);
+
+                // 第三格煞車
+                setTimeout(() => {
+                    spinState[2] = false; 
+                    slots[2].innerText = resultSymbols[2];
+                    slots[2].classList.remove('spinning', 'tension'); slots[2].classList.add('locked');
+                    clearInterval(visualSpinInterval);
+                    
+                    calcSlot(resultSymbols[0], resultSymbols[1], resultSymbols[2]);
+                    isSpinning = false;
+                }, tensionDelay);
+
+            }, 1200);
         }
 
-        function calcSlot() {
-            let s1 = slots[0].innerText, s2 = slots[1].innerText, s3 = slots[2].innerText;
+        function calcSlot(s1, s2, s3) {
+            slotStatus.classList.remove('highlight');
             if (s1 === s2 && s2 === s3) {
                 currentMultiplier = (s1 === '7️⃣') ? 10 : (s1 === '💎') ? 5 : 3;
                 showMessage("🔥 終極爆發 🔥", "#ffeb3b");
                 triggerShake('heavy');
+                triggerFlash();
             } else if (s1 === s2 || s2 === s3 || s1 === s3) {
                 currentMultiplier = 2;
+                triggerShake('light');
             } else {
                 currentMultiplier = 1;
             }
-            slotStatus.innerText = `目前倍率: x${currentMultiplier}`;
+            slotStatus.innerText = `準備完成！(目前倍率: x${currentMultiplier})`;
         }
 
-        // --- 玩家攻擊 ---
+        // --- 戰鬥 ---
         function attackEnemy(e) {
             if (e.target === parryCanvas) return;
-            
             let totalDamage = baseAttack * currentMultiplier;
             addVfx(e.clientX, e.clientY, 'hit');
             addDamageNumber(e.clientX, e.clientY, totalDamage, currentMultiplier);
             
-            // 根據倍率決定震動與閃爍強度
-            if (currentMultiplier >= 5) {
-                triggerShake('heavy');
-                triggerFlash();
-            } else {
-                triggerShake('light');
-            }
+            if (currentMultiplier >= 5) { triggerShake('heavy'); triggerFlash(); } 
+            else { triggerShake('light'); }
 
-            enemyHp -= totalDamage;
-            updateUI('enemy', true);
+            enemyHp -= totalDamage; updateUI('enemy', true);
             
             if (enemyHp <= 0) {
                 showMessage("敵人已擊破！", "#00e5ff");
-                triggerShake('heavy');
-                enemyHp = maxEnemyHp;
-                updateUI('enemy', false);
+                triggerShake('heavy'); enemyHp = maxEnemyHp; updateUI('enemy', false);
             }
         }
 
-        // --- 敵人攻擊與格擋機制 ---
         function startEnemyAttack() {
             if (isEnemyAttacking) return;
-            isEnemyAttacking = true;
-            parryRadius = 90;
-            
+            isEnemyAttacking = true; parryRadius = 90;
             const areaRect = battleArea.getBoundingClientRect();
-            let rx = Math.max(0, Math.random() * (areaRect.width - parryCanvas.width));
-            let ry = Math.max(0, Math.random() * (areaRect.height - parryCanvas.height));
-            
-            parryCanvas.style.left = rx + 'px';
-            parryCanvas.style.top = ry + 'px';
-            parryCanvas.style.display = 'block';
-            parryCanvas.style.pointerEvents = 'auto';
-            
+            parryCanvas.style.left = Math.max(0, Math.random() * (areaRect.width - parryCanvas.width)) + 'px';
+            parryCanvas.style.top = Math.max(0, Math.random() * (areaRect.height - parryCanvas.height)) + 'px';
+            parryCanvas.style.display = 'block'; parryCanvas.style.pointerEvents = 'auto';
             drawParry();
         }
 
         function drawParry() {
             parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
             const cx = parryCanvas.width / 2, cy = parryCanvas.height / 2;
-
-            parryCtx.beginPath();
-            parryCtx.arc(cx, cy, targetRadius, 0, Math.PI * 2);
-            parryCtx.strokeStyle = 'rgba(255,255,255,0.8)';
-            parryCtx.lineWidth = 4;
-            parryCtx.setLineDash([8, 8]);
-            parryCtx.stroke();
-            parryCtx.setLineDash([]);
-
-            parryCtx.beginPath();
-            parryCtx.arc(cx, cy, Math.max(0, parryRadius), 0, Math.PI * 2);
-            parryCtx.strokeStyle = '#ff1744';
-            parryCtx.lineWidth = 5;
-            parryCtx.shadowBlur = 15;
-            parryCtx.shadowColor = '#ff1744';
-            parryCtx.stroke();
-            parryCtx.shadowBlur = 0;
-
+            parryCtx.beginPath(); parryCtx.arc(cx, cy, targetRadius, 0, Math.PI * 2); parryCtx.strokeStyle = 'rgba(255,255,255,0.8)'; parryCtx.lineWidth = 4; parryCtx.setLineDash([8, 8]); parryCtx.stroke(); parryCtx.setLineDash([]);
+            parryCtx.beginPath(); parryCtx.arc(cx, cy, Math.max(0, parryRadius), 0, Math.PI * 2); parryCtx.strokeStyle = '#ff1744'; parryCtx.lineWidth = 5; parryCtx.shadowBlur = 15; parryCtx.shadowColor = '#ff1744'; parryCtx.stroke(); parryCtx.shadowBlur = 0;
             parryRadius -= 1.8;
-
-            if (parryRadius <= 0) {
-                failParry();
-            } else {
-                parryAnimationId = requestAnimationFrame(drawParry);
-            }
+            if (parryRadius <= 0) failParry(); else parryAnimationId = requestAnimationFrame(drawParry);
         }
 
         parryCanvas.addEventListener('pointerdown', (e) => {
             if (!isEnemyAttacking) return;
-            if (Math.abs(parryRadius - targetRadius) <= tolerance) successParry(e);
-            else failParry();
+            if (Math.abs(parryRadius - targetRadius) <= tolerance) successParry(e); else failParry();
         });
 
         function successParry(e) {
-            cancelAnimationFrame(parryAnimationId);
-            triggerShake('heavy');
-            showMessage("✨ PERFECT ✨", "#00e676");
-            
-            const rect = parryCanvas.getBoundingClientRect();
-            addVfx(rect.left + rect.width/2, rect.top + rect.height/2, 'parry');
-            
-            enemyHp -= baseAttack * 5; 
-            updateUI('enemy', true);
-            endEnemyAttack();
+            cancelAnimationFrame(parryAnimationId); triggerShake('heavy'); showMessage("✨ PERFECT ✨", "#00e676");
+            const rect = parryCanvas.getBoundingClientRect(); addVfx(rect.left + rect.width/2, rect.top + rect.height/2, 'parry');
+            enemyHp -= baseAttack * 5; updateUI('enemy', true); endEnemyAttack();
         }
 
         function failParry() {
-            cancelAnimationFrame(parryAnimationId);
-            triggerShake('heavy');
-            showMessage("❌ 受擊 ❌", "#ff1744");
-            
-            playerHp -= enemyDamage;
-            updateUI('player', true);
-            
+            cancelAnimationFrame(parryAnimationId); triggerShake('heavy'); showMessage("❌ 受擊 ❌", "#ff1744");
+            playerHp -= enemyDamage; updateUI('player', true);
             if (playerHp <= 0) {
                 setTimeout(() => alert("Game Over! 重新開始"), 100);
-                playerHp = maxPlayerHp; enemyHp = maxEnemyHp;
-                updateUI('player', false); updateUI('enemy', false);
+                playerHp = maxPlayerHp; enemyHp = maxEnemyHp; updateUI('player', false); updateUI('enemy', false);
             }
             endEnemyAttack();
         }
 
-        function endEnemyAttack() {
-            isEnemyAttacking = false;
-            parryCanvas.style.display = 'none';
-            parryCanvas.style.pointerEvents = 'none';
-        }
+        function endEnemyAttack() { isEnemyAttacking = false; parryCanvas.style.display = 'none'; parryCanvas.style.pointerEvents = 'none'; }
+        function scheduleNextEnemyAttack() { setTimeout(() => { if (playerHp > 0) startEnemyAttack(); scheduleNextEnemyAttack(); }, Math.random() * 2000 + 1500); }
 
-        // --- 迴圈 ---
-        function scheduleNextEnemyAttack() {
-            setTimeout(() => {
-                if (playerHp > 0) startEnemyAttack();
-                scheduleNextEnemyAttack();
-            }, Math.random() * 2000 + 1500);
-        }
-
-        updateUI('player', false); updateUI('enemy', false);
-        scheduleNextEnemyAttack();
+        updateUI('player', false); updateUI('enemy', false); scheduleNextEnemyAttack();
     </script>
 </body>
 </html>

@@ -53,7 +53,6 @@
             z-index: 100; transition: opacity 0.05s ease-out;
         }
 
-        /* 頂部極簡 UI */
         #top-ui {
             width: 100%; max-width: 600px; padding: 6px 10px;
             display: flex; flex-direction: column; align-items: center;
@@ -89,7 +88,6 @@
         .hp-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.1s ease-out; }
         #enemy-hp-fill { background: #d50000; }
 
-        /* 微縮拉霸機 */
         #slot-machine-container {
             display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 160px;
             background: linear-gradient(to bottom, #555, #222);
@@ -144,7 +142,7 @@
 
     <div id="epilepsy-warning">
         <div class="warning-title">光敏性癲癇警告</div>
-        <div class="warning-text">本遊戲包含強烈閃光與畫面震動<br><br>患有光敏性癲癇或對閃光敏感者<br><br>請勿遊玩</div>
+        <div class="warning-text">本遊戲包含閃光與畫面震動<br><br>患有光敏性癲癇或對閃光敏感者<br><br>請勿遊玩</div>
         <div class="warning-btn" id="start-btn">我已了解 點擊開始</div>
     </div>
 
@@ -163,7 +161,6 @@
                 </div>
             </div>
 
-            <!-- 移除了文字 只保留血條和狀態框 -->
             <div class="hp-container">
                 <div class="hp-box" id="player-hp-box">
                     <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
@@ -287,33 +284,29 @@
         let particles = [], damageNumbers = [], slashes = [];
         function addVfx(x, y, type) {
             if (type === 'hit') {
-                // 更銳利 更細 更快的刀光
-                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 150 + Math.random() * 50, alpha: 1, decay: 0.18, thickness: 3 });
-                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 100 + Math.random() * 50, alpha: 1, decay: 0.2, thickness: 1.5 });
-                // 中心爆點改小
-                particles.push({ x: x, y: y, type: 'spark', size: 4, growth: 8, alpha: 1, decay: 0.15, color: '#fff' });
-                // 碎片變小且重力加強
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 180 + Math.random() * 50, alpha: 1, decay: 0.12, thickness: 2.5 });
+                slashes.push({ x: x, y: y, angle: Math.random() * Math.PI, length: 150 + Math.random() * 60, alpha: 1, decay: 0.15, thickness: 1.5 });
+                particles.push({ x: x, y: y, type: 'spark', size: 3, growth: 8, alpha: 1, decay: 0.15, color: '#fff' });
                 for (let i = 0; i < 15; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20 - 5, gravity: 1.5, size: Math.random() * 5 + 2, color: currentMultiplier >= 5 ? '#ffeb3b' : '#fff', alpha: 1, decay: 0.05 + Math.random() * 0.05 }); }
             } else if (type === 'parry') {
-                particles.push({ x: x, y: y, type: 'spark', size: 8, growth: 15, alpha: 1, decay: 0.1, color: '#fff' });
-                particles.push({ x: x, y: y, type: 'shockwave', size: 20, color: '#00e676', alpha: 1, decay: 0.08, thickness: 5 });
-                for (let i = 0; i < 20; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, gravity: 0.8, size: Math.random() * 6 + 2, color: '#b2ff59', alpha: 1, decay: 0.05 }); }
+                particles.push({ x: x, y: y, type: 'spark', size: 6, growth: 12, alpha: 1, decay: 0.1, color: '#fff' });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 20, color: '#00e676', alpha: 1, decay: 0.08, thickness: 4 });
+                for (let i = 0; i < 20; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, gravity: 0.8, size: Math.random() * 5 + 2, color: '#b2ff59', alpha: 1, decay: 0.05 }); }
             } else if (type === 'shield') {
-                particles.push({ x: x, y: y, type: 'shockwave', size: 30, color: '#ffb300', alpha: 1, decay: 0.05, thickness: 8 });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 30, color: '#ffb300', alpha: 1, decay: 0.05, thickness: 6 });
             } else if (type === 'death') {
-                particles.push({ x: x, y: y, type: 'spark', size: 20, growth: 60, alpha: 1, decay: 0.03, color: '#fff' });
-                particles.push({ x: x, y: y, type: 'shockwave', size: 40, color: '#d50000', alpha: 1, decay: 0.03, thickness: 15 });
-                for (let i = 0; i < 60; i++) {
+                particles.push({ x: x, y: y, type: 'spark', size: 15, growth: 40, alpha: 1, decay: 0.03, color: '#fff' });
+                particles.push({ x: x, y: y, type: 'shockwave', size: 40, color: '#d50000', alpha: 1, decay: 0.03, thickness: 10 });
+                for (let i = 0; i < 50; i++) {
                     particles.push({ 
-                        x: x, y: y, vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50, 
-                        gravity: 1, size: Math.random() * 12 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
+                        x: x, y: y, vx: (Math.random() - 0.5) * 45, vy: (Math.random() - 0.5) * 45, 
+                        gravity: 1, size: Math.random() * 10 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
                         alpha: 1, decay: 0.02 + Math.random() * 0.02 
                     });
                 }
             }
         }
 
-        // 傷害顏色分級
         function addDamageNumber(x, y, damage, multiplier) { 
             let rgb = '255, 255, 255';
             if (multiplier >= 20) rgb = '213, 0, 249'; 
@@ -325,7 +318,7 @@
             damageNumbers.push({ 
                 x: x + (Math.random() - 0.5) * 50, y: y - 20, damage: damage, 
                 rgb: rgb, vx: (Math.random() - 0.5) * 3, vy: -8 - Math.random() * 5, 
-                gravity: 0.6, alpha: 2, scale: multiplier >= 5 ? 1.6 : 1.1 
+                gravity: 0.6, alpha: 2, scale: multiplier >= 5 ? 1.4 : 1.1 
             }); 
         }
 
@@ -334,7 +327,7 @@
             for (let i = slashes.length - 1; i >= 0; i--) { let s = slashes[i]; s.alpha -= s.decay; vfxCtx.save(); vfxCtx.translate(s.x, s.y); vfxCtx.rotate(s.angle); vfxCtx.beginPath(); vfxCtx.moveTo(-s.length/2, 0); vfxCtx.lineTo(s.length/2, 0); vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; vfxCtx.lineWidth = s.thickness * s.alpha; vfxCtx.stroke(); vfxCtx.restore(); if (s.alpha <= 0) slashes.splice(i, 1); }
             for (let i = particles.length - 1; i >= 0; i--) { 
                 let p = particles[i]; 
-                if (p.type === 'shockwave') { p.size += 20; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.lineWidth = p.thickness * p.alpha; vfxCtx.stroke(); vfxCtx.globalAlpha = 1; } 
+                if (p.type === 'shockwave') { p.size += 15; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.lineWidth = p.thickness * p.alpha; vfxCtx.stroke(); vfxCtx.globalAlpha = 1; } 
                 else if (p.type === 'spark') { p.size += p.growth; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; }
                 else { p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; } 
                 if (p.alpha <= 0) particles.splice(i, 1); 
@@ -417,7 +410,7 @@
                 else if (match3 === 'A') { currentMultiplier = 5; } 
                 else if (match3 === 'B') { currentMultiplier = 3; } 
                 else if (match3 === 'C') { currentMultiplier = 2; } 
-                showMessage("極限爆發", "#ffeb3b"); triggerShake('heavy'); triggerFlash(0.8);
+                showMessage("極限爆發", "#ffeb3b"); triggerShake('heavy'); triggerFlash(0.4);
             } else if (match2) { 
                 if (match2 === 'SS') { currentMultiplier = 5; } 
                 else if (match2 === 'S') { currentMultiplier = 3; } 
@@ -485,7 +478,7 @@
 
                 showMessage("敵人擊破", "#ffb300"); 
                 triggerShake('heavy'); 
-                triggerFlash(1);
+                triggerFlash(0.5);
                 addVfx(window.innerWidth / 2, window.innerHeight / 2, 'death');
                 
                 maxEnemyHp = 1000 + Math.min(currentKills * 500, 2000);
@@ -501,8 +494,10 @@
             addVfx(clientX, clientY, 'hit');
             addDamageNumber(clientX, clientY, totalDamage, currentMultiplier);
             
-            if (currentMultiplier >= 5) { 
-                triggerShake('heavy'); triggerFlash(0.3); hitStop(60); 
+            if (currentMultiplier >= 10) { 
+                triggerShake('heavy'); triggerFlash(0.15); hitStop(60); 
+            } else if (currentMultiplier >= 5) { 
+                triggerShake('heavy'); triggerFlash(0.08); hitStop(45); 
             } else { 
                 triggerShake('light'); hitStop(30); 
             }
@@ -611,7 +606,7 @@
         });
 
         function successParry(e) {
-            cancelAnimationFrame(parryAnimationId); triggerShake('heavy'); triggerFlash(0.5); showMessage("PERFECT", "#00e676");
+            cancelAnimationFrame(parryAnimationId); triggerShake('heavy'); triggerFlash(0.1); showMessage("PERFECT", "#00e676");
             addVfx(targetX + parryCanvas.getBoundingClientRect().left, targetY + parryCanvas.getBoundingClientRect().top, 'parry');
             
             enemyHp -= baseAttack * 5; 
@@ -629,7 +624,7 @@
                 endEnemyAttack();
                 return;
             }
-            triggerShake('heavy'); triggerFlash(0.8); showMessage("受到攻擊", "#d50000");
+            triggerShake('heavy'); triggerFlash(0.3); showMessage("受到攻擊", "#d50000");
             playerHp -= enemyDamage; updateUI('player', true);
             if (playerHp <= 0) { 
                 showMessage("遊戲結束 重新開始", "#d50000");

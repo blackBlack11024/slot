@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拉霸與格擋：空間判定優化版</title>
+    <title>拉霸與格擋：無敵防誤觸版</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -38,7 +38,17 @@
         }
 
         .hp-container { display: flex; justify-content: space-between; width: 100%; margin-bottom: 15px; }
-        .hp-box { background: #2a2a2a; padding: 10px 20px; border-radius: 8px; border: 2px solid #555; text-align: center; flex: 1; margin: 0 5px; transition: transform 0.05s ease-out; }
+        .hp-box { background: #2a2a2a; padding: 10px 20px; border-radius: 8px; border: 2px solid #555; text-align: center; flex: 1; margin: 0 5px; transition: all 0.2s ease-out; }
+        
+        /* 玩家無敵狀態特效 */
+        .hp-box.invincible {
+            border-color: #ffeb3b;
+            box-shadow: 0 0 15px #ffeb3b;
+            background: rgba(255, 235, 59, 0.15);
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+
         @keyframes damageFlash { 0% { border-color: #ff1744; box-shadow: 0 0 20px #ff1744; background: #5a0000; } 100% { border-color: #555; box-shadow: none; background: #2a2a2a; } }
         .hp-box.damaged { animation: damageFlash 0.2s ease-out; }
         .hp-bar { width: 100%; height: 20px; background: #111; border-radius: 10px; overflow: hidden; margin-top: 5px; border: 1px inset #333; }
@@ -54,12 +64,7 @@
         }
         #slot-machine-container:active { transform: scale(0.97); }
         
-        .slots {
-            display: flex; gap: 15px; font-size: 40px; margin-bottom: 5px;
-            background: #050505; padding: 10px; border-radius: 8px;
-            border: inset 4px #444; position: relative; overflow: hidden;
-        }
-        
+        .slots { display: flex; gap: 15px; font-size: 40px; margin-bottom: 5px; background: #050505; padding: 10px; border-radius: 8px; border: inset 4px #444; position: relative; overflow: hidden; }
         .slot-item { width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background: #fff; border-radius: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); transition: all 0.1s; }
         .slot-item.spinning { transform: scaleY(1.5); color: #888; }
         @keyframes lock-in-pop { 0% { transform: scale(1.4); filter: brightness(2); } 50% { transform: scale(0.9); filter: brightness(1.5); } 100% { transform: scale(1); filter: brightness(1); } }
@@ -94,7 +99,7 @@
         <div id="top-ui">
             <div class="hp-container">
                 <div class="hp-box" id="player-hp-box">
-                    <div>玩家 HP</div>
+                    <div id="player-status-text">玩家 HP</div>
                     <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
                 </div>
                 <div class="hp-box" id="enemy-hp-box">
@@ -133,23 +138,24 @@
         let isEnemyAttacking = false;
         let parryRadius = 0; 
         const targetRadius = 60; 
-        const tolerance = 25; // 判定容錯範圍
+        const tolerance = 25; 
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
-        // 新增：隨機目標座標
         let targetX = 0;
         let targetY = 0;
-        let parryStartTime = 0; 
 
+        // 新增：無敵狀態
         let jackpotBonusChance = 0; 
         let buffInterval = null;
         let buffEndTime = 0;
+        let isInvincible = false;
 
         // --- DOM ---
         const container = document.getElementById('game-container');
         const flashOverlay = document.getElementById('flash-overlay');
         const playerHpBox = document.getElementById('player-hp-box');
+        const playerStatusText = document.getElementById('player-status-text');
         const enemyHpBox = document.getElementById('enemy-hp-box');
         const playerHpFill = document.getElementById('player-hp-fill');
         const enemyHpFill = document.getElementById('enemy-hp-fill');
@@ -200,6 +206,9 @@
             } else if (type === 'parry') {
                 particles.push({ x: x, y: y, type: 'shockwave', size: 20, color: '#00e676', alpha: 1, decay: 0.04 });
                 for (let i = 0; i < 40; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30, gravity: 0, size: Math.random() * 10 + 4, color: '#b2ff59', alpha: 1, decay: 0.04 }); }
+            } else if (type === 'shield') {
+                // 無敵格擋特效
+                particles.push({ x: x, y: y, type: 'shockwave', size: 25, color: '#ffeb3b', alpha: 1, decay: 0.03 });
             }
         }
 
@@ -208,7 +217,7 @@
         function updateVfx() {
             vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
             for (let i = slashes.length - 1; i >= 0; i--) { let s = slashes[i]; s.alpha -= s.decay; vfxCtx.save(); vfxCtx.translate(s.x, s.y); vfxCtx.rotate(s.angle); vfxCtx.beginPath(); vfxCtx.moveTo(-s.length/2, 0); vfxCtx.lineTo(s.length/2, 0); vfxCtx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; vfxCtx.lineWidth = 4 + s.alpha * 4; vfxCtx.shadowBlur = 10; vfxCtx.shadowColor = '#fff'; vfxCtx.stroke(); vfxCtx.restore(); if (s.alpha <= 0) slashes.splice(i, 1); }
-            for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; if (p.type === 'shockwave') { p.size += 15; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`; vfxCtx.lineWidth = 8; vfxCtx.stroke(); } else { p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; } if (p.alpha <= 0) particles.splice(i, 1); }
+            for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; if (p.type === 'shockwave') { p.size += 15; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.strokeStyle = `rgba(0, 230, 118, ${p.alpha})`; if(p.color === '#ffeb3b') vfxCtx.strokeStyle = `rgba(255, 235, 59, ${p.alpha})`; vfxCtx.lineWidth = 8; vfxCtx.stroke(); } else { p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay; vfxCtx.beginPath(); vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); vfxCtx.fillStyle = p.color; vfxCtx.globalAlpha = Math.max(0, p.alpha); vfxCtx.fill(); vfxCtx.globalAlpha = 1; } if (p.alpha <= 0) particles.splice(i, 1); }
             for (let i = damageNumbers.length - 1; i >= 0; i--) { let d = damageNumbers[i]; d.vy += d.gravity; d.x += d.vx; d.y += d.vy; d.alpha -= 0.03; vfxCtx.save(); vfxCtx.translate(d.x, d.y); vfxCtx.scale(d.scale, d.scale); vfxCtx.font = '900 36px Arial'; vfxCtx.fillStyle = `rgba(255, 60, 60, ${Math.min(1, d.alpha)})`; vfxCtx.strokeStyle = `rgba(0, 0, 0, ${Math.min(1, d.alpha)})`; vfxCtx.lineWidth = 4; let text = `-${d.damage}` + (d.multiplier > 1 ? `(x${d.multiplier})` : ""); vfxCtx.strokeText(text, 0, 0); vfxCtx.fillText(text, 0, 0); vfxCtx.restore(); if (d.alpha <= 0) damageNumbers.splice(i, 1); }
             requestAnimationFrame(updateVfx);
         }
@@ -250,13 +259,32 @@
         function calcSlot(s1, s2, s3) {
             slotStatus.classList.remove('highlight');
             let isJackpot = false;
+            
             if (s1 === s2 && s2 === s3) {
-                if (s1 === '7️⃣') { currentMultiplier = 10; isJackpot = true; } else if (s1 === '💎') { currentMultiplier = 5; isJackpot = true; } else { currentMultiplier = 3; }
+                if (s1 === '7️⃣') { currentMultiplier = 10; isJackpot = true; } 
+                else if (s1 === '💎') { currentMultiplier = 5; isJackpot = true; } 
+                else { currentMultiplier = 3; }
                 showMessage("🔥 終極爆發 🔥", "#ffeb3b"); triggerShake('heavy'); triggerFlash();
-            } else if (s1 === s2 || s2 === s3 || s1 === s3) { currentMultiplier = 2; triggerShake('light'); } else { currentMultiplier = 1; }
+            } else if (s1 === s2 || s2 === s3 || s1 === s3) { currentMultiplier = 2; triggerShake('light'); } 
+            else { currentMultiplier = 1; }
 
-            if (isJackpot) { jackpotBonusChance += 0.20; slotChainText.innerText = `🔥 連莊機率額外提升 +${Math.round(jackpotBonusChance * 100)}% 🔥`; slotChainText.style.display = 'block'; } 
-            else { jackpotBonusChance = 0; slotChainText.style.display = 'none'; }
+            // 處理大獎無敵狀態與機率
+            if (isJackpot) { 
+                jackpotBonusChance += 0.20; 
+                slotChainText.innerText = `🔥 連莊機率額外提升 +${Math.round(jackpotBonusChance * 100)}% 🔥`; 
+                slotChainText.style.display = 'block'; 
+                
+                isInvincible = true;
+                playerHpBox.classList.add('invincible');
+                playerStatusText.innerText = "玩家 HP (🛡️無敵狀態)";
+            } else { 
+                jackpotBonusChance = 0; 
+                slotChainText.style.display = 'none'; 
+                
+                isInvincible = false;
+                playerHpBox.classList.remove('invincible');
+                playerStatusText.innerText = "玩家 HP";
+            }
             
             slotStatus.innerText = `目前倍率: x${currentMultiplier}`;
             if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
@@ -266,14 +294,23 @@
             clearInterval(buffInterval); buffContainer.style.display = 'block'; buffEndTime = Date.now() + duration;
             buffInterval = setInterval(() => {
                 let remaining = buffEndTime - Date.now();
-                if (remaining <= 0) { clearInterval(buffInterval); currentMultiplier = 1; jackpotBonusChance = 0; buffContainer.style.display = 'none'; slotChainText.style.display = 'none'; slotStatus.innerText = "加成結束！點擊重新拉霸"; triggerShake('light'); } 
-                else {
+                if (remaining <= 0) { 
+                    clearInterval(buffInterval); 
+                    currentMultiplier = 1; jackpotBonusChance = 0; 
+                    isInvincible = false; playerHpBox.classList.remove('invincible'); playerStatusText.innerText = "玩家 HP";
+                    buffContainer.style.display = 'none'; slotChainText.style.display = 'none'; 
+                    slotStatus.innerText = "加成結束！點擊重新拉霸"; triggerShake('light'); 
+                } else {
                     let percent = (remaining / duration) * 100; buffFill.style.width = percent + '%';
                     if (percent < 25) { buffFill.style.background = 'linear-gradient(90deg, #ff1744, #d50000)'; } else { buffFill.style.background = 'linear-gradient(90deg, #ffeb3b, #ff9800)'; }
                 }
             }, 30);
         }
-        function clearBuffTimer() { clearInterval(buffInterval); buffContainer.style.display = 'none'; }
+        
+        function clearBuffTimer() { 
+            clearInterval(buffInterval); buffContainer.style.display = 'none'; 
+            isInvincible = false; playerHpBox.classList.remove('invincible'); playerStatusText.innerText = "玩家 HP";
+        }
 
         // --- 核心攻擊 ---
         function executeAttack(clientX, clientY) {
@@ -287,42 +324,37 @@
             if (enemyHp <= 0) { showMessage("敵人已擊破！", "#00e5ff"); triggerShake('heavy'); enemyHp = maxEnemyHp; updateUI('enemy', false); }
         }
 
-        // 當畫面上沒有格擋機制時，點擊空白處會觸發這個
         function attackEnemy(e) {
             if (e.target === parryCanvas) return;
             executeAttack(e.clientX, e.clientY);
         }
 
-        // --- 空間分離格擋機制 ---
+        // --- 格擋機制 ---
         function startEnemyAttack() {
             if (isEnemyAttacking) return;
             isEnemyAttacking = true; 
-            parryStartTime = Date.now();
             
             const rect = battleArea.getBoundingClientRect();
             parryCanvas.width = rect.width; 
             parryCanvas.height = rect.height;
             
-            // 隨機計算目標圈的座標 (加上 padding 確保不會貼在邊緣)
             const padding = targetRadius + 20;
             targetX = padding + Math.random() * (rect.width - padding * 2);
             targetY = padding + Math.random() * (rect.height - padding * 2);
             
-            // 讓紅色光圈從比畫面還大的地方縮進來
             parryRadius = Math.max(rect.width, rect.height) * 1.2;
             
-            // 收縮速度變慢 (除以 110，大約 1.8 秒到達中心)
-            parryShrinkSpeed = (parryRadius - targetRadius) / 110; 
+            // 稍微調快：從 110 改為 85 (大約 1.3~1.4秒到達中心)
+            parryShrinkSpeed = (parryRadius - targetRadius) / 85; 
             
             parryCanvas.style.display = 'block'; 
-            parryCanvas.style.pointerEvents = 'auto'; // 攔截全螢幕點擊
+            parryCanvas.style.pointerEvents = 'auto';
             drawParry();
         }
 
         function drawParry() {
             parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
             
-            // 畫目標圈 (加上微透明底色，讓它看起來像個按鈕)
             parryCtx.beginPath(); 
             parryCtx.arc(targetX, targetY, targetRadius, 0, Math.PI * 2); 
             parryCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
@@ -333,7 +365,6 @@
             parryCtx.stroke(); 
             parryCtx.setLineDash([]);
             
-            // 畫縮小的紅圈
             parryCtx.beginPath(); 
             parryCtx.arc(targetX, targetY, Math.max(0, parryRadius), 0, Math.PI * 2); 
             parryCtx.strokeStyle = '#ff1744'; 
@@ -345,7 +376,7 @@
             
             parryRadius -= parryShrinkSpeed;
             
-            // 改為縮過頭才算失敗，給玩家更寬容的延遲點擊空間
+            // 只有當光圈縮得比容錯範圍還要小(太晚按)，才會失敗！
             if (parryRadius < targetRadius - tolerance) {
                 failParry();
             } else {
@@ -359,29 +390,21 @@
             const rect = parryCanvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
-
-            // 計算點擊位置跟隨機目標圈的距離
             const dist = Math.hypot(clickX - targetX, clickY - targetY);
-            let timeSinceStart = Date.now() - parryStartTime;
 
-            // 判斷 1：你點擊的地方是在「格擋目標圈」附近嗎？(給予 40px 的外圍容錯)
+            // 如果點擊了目標圈附近
             if (dist <= targetRadius + 40) {
-                
-                // 緩衝機制：剛出現 0.35 秒內，如果你手殘點到目標圈，系統會原諒你，當作一般攻擊
-                if (timeSinceStart < 350) {
+                let diff = parryRadius - targetRadius;
+
+                if (diff > tolerance) {
+                    // 太早按！這時候不再判定失敗，直接轉換為一般攻擊，而且光圈不消失！
                     executeAttack(e.clientX, e.clientY);
-                    return;
-                }
-
-                // 過了緩衝期，認真判定你的節奏！
-                if (Math.abs(parryRadius - targetRadius) <= tolerance) {
+                } else if (Math.abs(diff) <= tolerance) {
+                    // 完美格擋
                     successParry(e); 
-                } else {
-                    failParry();
                 }
-
             } else {
-                // 判斷 2：如果你點的是畫面的「其他地方」，就當作你還在努力輸出，不干擾你！
+                // 點擊畫面其他地方，照常攻擊
                 executeAttack(e.clientX, e.clientY);
             }
         });
@@ -393,7 +416,18 @@
         }
 
         function failParry() {
-            cancelAnimationFrame(parryAnimationId); triggerShake('heavy'); showMessage("❌ 受擊 ❌", "#ff1744");
+            cancelAnimationFrame(parryAnimationId);
+            
+            // 無敵狀態判定
+            if (isInvincible) {
+                triggerShake('light'); 
+                showMessage("🛡️ 無敵擋下！", "#ffeb3b");
+                addVfx(targetX + parryCanvas.getBoundingClientRect().left, targetY + parryCanvas.getBoundingClientRect().top, 'shield');
+                endEnemyAttack();
+                return;
+            }
+
+            triggerShake('heavy'); showMessage("❌ 受擊 ❌", "#ff1744");
             playerHp -= enemyDamage; updateUI('player', true);
             if (playerHp <= 0) { setTimeout(() => alert("Game Over! 重新開始"), 100); playerHp = maxPlayerHp; enemyHp = maxEnemyHp; updateUI('player', false); updateUI('enemy', false); }
             endEnemyAttack();

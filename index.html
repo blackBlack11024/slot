@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>打機霸</title>
+    <title>拉霸與格擋</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -203,9 +203,13 @@
         let maxKills = localStorage.getItem('maxKills') || 0;
         
         let isEnemyAttacking = false;
+        let isFakeParry = false;
         let parryRadius = 0; 
         let parryStartRadius = 0;
         const targetRadius = 60; 
+        
+        const toleranceEarly = 100; 
+        const toleranceLate = 25;  
         
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
@@ -220,9 +224,6 @@
         let variableSpeedType = 0; 
 
         let lastClickTime = 0;
-        let samePixelCount = 0;
-        let lastClickX = -1;
-        let lastClickY = -1;
 
         const warningScreen = document.getElementById('epilepsy-warning');
         const startBtn = document.getElementById('start-btn');
@@ -353,14 +354,6 @@
         function isValidClick(e) {
             let now = Date.now();
             if (now - lastClickTime < 35) return false; 
-            if (e.clientX === lastClickX && e.clientY === lastClickY) {
-                samePixelCount++;
-                if (samePixelCount > 4) return false; 
-            } else {
-                samePixelCount = 0;
-            }
-            lastClickX = e.clientX;
-            lastClickY = e.clientY;
             lastClickTime = now;
             return true;
         }
@@ -372,12 +365,18 @@
             spinSlot();
         });
 
-        // 支援畫面上任何地方滾動滾輪觸發拉霸
         window.addEventListener('wheel', (e) => {
             if (!isSpinning) {
                 spinSlot();
             }
         }, { passive: true });
+
+        window.addEventListener('pointerdown', (e) => {
+            if (e.button === 1) { 
+                e.preventDefault();
+                spinSlot();
+            }
+        });
 
         function spinSlot() {
             if (isSpinning) return;
@@ -556,6 +555,7 @@
         }
 
         battleArea.addEventListener('pointerdown', (e) => {
+            if (e.button === 1) return; 
             e.preventDefault();
             if (e.target === parryCanvas) return;
             if (!isValidClick(e)) return;
@@ -569,7 +569,6 @@
             const rect = battleArea.getBoundingClientRect();
             parryCanvas.width = rect.width; parryCanvas.height = rect.height;
             
-            // 縮小最高生成距離 解決大螢幕速度過快的問題
             const padding = targetRadius + 80;
             targetX = padding + Math.random() * (rect.width - padding * 2);
             targetY = padding + Math.random() * (rect.height - padding * 2);
@@ -580,13 +579,16 @@
             let speedFactor = Math.max(45, 120 - (currentKills * 5));
             parryShrinkSpeed = (parryRadius - targetRadius) / speedFactor; 
             
-            if (currentKills >= 5 && Math.random() < 0.2) {
+            isFakeParry = false;
+            variableSpeedType = 0;
+
+            if (currentKills >= 28 && Math.random() < 0.15) {
+                isFakeParry = true;
+            } else if (currentKills >= 5 && Math.random() < 0.2) {
                 let rand = Math.random();
                 if (rand < 0.33) variableSpeedType = 1; 
                 else if (rand < 0.66) variableSpeedType = 2; 
                 else variableSpeedType = 3; 
-            } else {
-                variableSpeedType = 0;
             }
             
             parryCanvas.style.display = 'block'; parryCanvas.style.pointerEvents = 'auto';
@@ -595,6 +597,8 @@
 
         function drawParry() {
             parryCtx.clearRect(0, 0, parryCanvas.width, parryCanvas.height);
+            
+            let mainColor = isFakeParry ? '#e040fb' : '#d50000';
             
             parryCtx.beginPath(); 
             parryCtx.arc(targetX, targetY, targetRadius, 0, Math.PI * 2); 
@@ -608,12 +612,26 @@
             
             parryCtx.beginPath(); 
             parryCtx.arc(targetX, targetY, Math.max(0, parryRadius), 0, Math.PI * 2); 
-            parryCtx.strokeStyle = '#d50000'; 
+            parryCtx.strokeStyle = mainColor; 
             parryCtx.lineWidth = 8; 
             parryCtx.shadowBlur = 10; 
-            parryCtx.shadowColor = '#d50000'; 
+            parryCtx.shadowColor = mainColor; 
             parryCtx.stroke(); 
             parryCtx.shadowBlur = 0;
+
+            if (isFakeParry) {
+                parryCtx.save();
+                parryCtx.translate(targetX, targetY);
+                parryCtx.strokeStyle = 'rgba(224, 64, 251, 0.6)';
+                parryCtx.lineWidth = 6;
+                parryCtx.beginPath();
+                parryCtx.moveTo(-20, -20);
+                parryCtx.lineTo(20, 20);
+                parryCtx.moveTo(20, -20);
+                parryCtx.lineTo(-20, 20);
+                parryCtx.stroke();
+                parryCtx.restore();
+            }
             
             let currentSpeed = parryShrinkSpeed;
 
@@ -632,18 +650,21 @@
 
             parryRadius -= currentSpeed;
             
-            // 動態判定時間：依據速度給予絕對安全的幀數容錯
-            let currentToleranceEarly = Math.max(150, currentSpeed * 10);
-            let currentToleranceLate = Math.max(40, currentSpeed * 3);
+            let currentToleranceLate = Math.max(30, currentSpeed * 3);
 
             if (parryRadius < targetRadius - currentToleranceLate) {
-                failParry();
+                if (isFakeParry) {
+                    successFakeParry();
+                } else {
+                    failParry();
+                }
             } else {
                 parryAnimationId = requestAnimationFrame(drawParry);
             }
         }
 
         parryCanvas.addEventListener('pointerdown', (e) => {
+            if (e.button === 1) return; 
             e.preventDefault();
             if (!isEnemyAttacking) return;
             if (!isValidClick(e)) return;
@@ -664,15 +685,19 @@
                 currentSpeed *= 0.4;
             }
             
-            let currentToleranceEarly = Math.max(150, currentSpeed * 10);
-            let currentToleranceLate = Math.max(40, currentSpeed * 3);
+            let currentToleranceEarly = Math.max(80, currentSpeed * 7);
+            let currentToleranceLate = Math.max(30, currentSpeed * 3);
 
             if (dist <= targetRadius + 120) {
-                let diff = parryRadius - targetRadius;
-                if (diff > currentToleranceEarly) {
-                    executeAttack(e.clientX, e.clientY);
-                } else if (diff >= -currentToleranceLate) {
-                    successParry(e); 
+                if (isFakeParry) {
+                    failFakeParry();
+                } else {
+                    let diff = parryRadius - targetRadius;
+                    if (diff > currentToleranceEarly) {
+                        executeAttack(e.clientX, e.clientY);
+                    } else if (diff >= -currentToleranceLate) {
+                        successParry(e); 
+                    }
                 }
             } else {
                 executeAttack(e.clientX, e.clientY);
@@ -687,6 +712,35 @@
             updateUI('enemy', true); 
             checkEnemyDeath();
             
+            endEnemyAttack();
+        }
+
+        function successFakeParry() {
+            cancelAnimationFrame(parryAnimationId);
+            showMessage("迴避成功", "#e040fb");
+            playerHp = Math.min(maxPlayerHp, playerHp + 10);
+            updateUI('player', false);
+            endEnemyAttack();
+        }
+
+        function failFakeParry() {
+            cancelAnimationFrame(parryAnimationId);
+            if (isInvincible) {
+                triggerShake('light'); hitStop(50); showMessage("無敵擋下", "#ffb300");
+                addVfx(targetX + parryCanvas.getBoundingClientRect().left, targetY + parryCanvas.getBoundingClientRect().top, 'shield');
+                endEnemyAttack();
+                return;
+            }
+            triggerShake('heavy'); triggerFlash(0.3); showMessage("觸發陷阱", "#e040fb");
+            playerHp -= enemyDamage; updateUI('player', true);
+            if (playerHp <= 0) { 
+                showMessage("遊戲結束 重新開始", "#d50000");
+                setTimeout(() => {
+                    playerHp = maxPlayerHp; maxEnemyHp = 1000; enemyHp = maxEnemyHp; 
+                    currentKills = 0; currentKillsDisplay.innerText = currentKills;
+                    updateUI('player', false); updateUI('enemy', false); 
+                }, 1000);
+            }
             endEnemyAttack();
         }
 

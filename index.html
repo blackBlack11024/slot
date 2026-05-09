@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>拉霸與格擋</title>
+    <title>打機霸</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -41,7 +41,7 @@
 
         @keyframes shake-micro { 0% {transform: translate(0px, 2px)} 50% {transform: translate(0px, -2px)} 100% {transform: translate(0px, 0px)} }
         @keyframes shake-light { 0% { transform: translate(3px, 3px) } 25% { transform: translate(-2px, -2px) } 50% { transform: translate(2px, 4px) } 75% { transform: translate(-2px, 2px) } 100% { transform: translate(0px, 0px) } }
-        @keyframes shake-heavy { 0% { transform: translate(6px, 6px) rotate(1deg); } 25% { transform: translate(-8px, -4px) rotate(-1deg); } 50% { transform: translate(4px, 10px) rotate(2deg); } 75% { transform: translate(-10px, 4px) rotate(-2deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
+        @keyframes shake-heavy { 0% { transform: translate(6px, 6px) rotate(1deg); } 25% { transform: translate(-8px, -4px) rotate(-1deg); } 50% { transform: translate(4px, 10px) rotate(2deg); } 75% { transform: translate(-10px, 4px) rotate(2deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-micro { animation: shake-micro 0.1s ease-out; }
         .shake-light { animation: shake-light 0.15s ease-out; }
         .shake-heavy { animation: shake-heavy 0.3s ease-out; }
@@ -208,9 +208,6 @@
         let parryStartRadius = 0;
         const targetRadius = 60; 
         
-        const toleranceEarly = 100; 
-        const toleranceLate = 25;  
-        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -224,6 +221,8 @@
         let variableSpeedType = 0; 
 
         let lastClickTime = 0;
+        let currentMouseX = 0;
+        let currentMouseY = 0;
 
         const warningScreen = document.getElementById('epilepsy-warning');
         const startBtn = document.getElementById('start-btn');
@@ -305,7 +304,7 @@
                 for (let i = 0; i < 50; i++) {
                     particles.push({ 
                         x: x, y: y, vx: (Math.random() - 0.5) * 45, vy: (Math.random() - 0.5) * 45, 
-                        gravity: 1, size: Math.random() * 12 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
+                        gravity: 1, size: Math.random() * 10 + 4, color: Math.random() > 0.5 ? '#d50000' : '#ff9800', 
                         alpha: 1, decay: 0.02 + Math.random() * 0.02 
                     });
                 }
@@ -351,11 +350,74 @@
         }
         updateVfx();
 
-        function isValidClick(e) {
+        function isValidClick() {
             let now = Date.now();
             if (now - lastClickTime < 35) return false; 
             lastClickTime = now;
             return true;
+        }
+
+        // 全域追蹤滑鼠座標
+        window.addEventListener('mousemove', (e) => {
+            currentMouseX = e.clientX;
+            currentMouseY = e.clientY;
+        });
+
+        // 鍵盤操控核心
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            // 排除掉一些系統功能鍵，其他按鍵皆可觸發
+            if (["Alt", "Control", "Shift", "Meta", "Tab", "CapsLock"].includes(e.key)) return;
+            
+            handleGlobalAction(currentMouseX, currentMouseY);
+        });
+
+        // 處理所有輸入（滑鼠與鍵盤通用）
+        function handleGlobalAction(x, y) {
+            if (!isValidClick()) return;
+
+            // 判斷是否在格擋圈範圍內
+            if (isEnemyAttacking) {
+                const rect = parryCanvas.getBoundingClientRect();
+                const clickX = x - rect.left;
+                const clickY = y - rect.top;
+                const dist = Math.hypot(clickX - targetX, clickY - targetY);
+
+                if (dist <= targetRadius + 120) {
+                    if (isFakeParry) {
+                        failFakeParry();
+                    } else {
+                        let currentSpeed = getActualSpeed();
+                        let currentToleranceEarly = Math.max(80, currentSpeed * 7);
+                        let currentToleranceLate = Math.max(30, currentSpeed * 3);
+                        let diff = parryRadius - targetRadius;
+
+                        if (diff > currentToleranceEarly) {
+                            executeAttack(x, y);
+                        } else if (diff >= -currentToleranceLate) {
+                            successParry(); 
+                        }
+                    }
+                    return;
+                }
+            }
+
+            // 若不在格擋圈內，則是普通攻擊
+            executeAttack(x, y);
+        }
+
+        function getActualSpeed() {
+            let s = parryShrinkSpeed;
+            if (variableSpeedType === 1) {
+                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
+                if (progress < 0.5) s *= 1.8; else if (progress < 0.8) s *= 0.15; else s *= 1.8;
+            } else if (variableSpeedType === 2) {
+                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
+                if (progress < 0.6) s *= 0.4; else s *= 2.2;
+            } else if (variableSpeedType === 3) {
+                s *= 0.4;
+            }
+            return s;
         }
 
         let isSpinning = false;
@@ -375,6 +437,13 @@
             if (e.button === 1) { 
                 e.preventDefault();
                 spinSlot();
+                return;
+            }
+            // 滑鼠左鍵處理
+            if (e.button === 0) {
+                if (e.target === parryCanvas || e.target === battleArea) {
+                    handleGlobalAction(e.clientX, e.clientY);
+                }
             }
         });
 
@@ -554,14 +623,6 @@
             checkEnemyDeath();
         }
 
-        battleArea.addEventListener('pointerdown', (e) => {
-            if (e.button === 1) return; 
-            e.preventDefault();
-            if (e.target === parryCanvas) return;
-            if (!isValidClick(e)) return;
-            executeAttack(e.clientX, e.clientY);
-        });
-
         function startEnemyAttack() {
             if (isEnemyAttacking) return;
             isEnemyAttacking = true; 
@@ -633,21 +694,7 @@
                 parryCtx.restore();
             }
             
-            let currentSpeed = parryShrinkSpeed;
-
-            if (variableSpeedType === 1) {
-                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
-                if (progress < 0.5) { currentSpeed *= 1.8; } 
-                else if (progress < 0.8) { currentSpeed *= 0.15; } 
-                else { currentSpeed *= 1.8; }
-            } else if (variableSpeedType === 2) {
-                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
-                if (progress < 0.6) { currentSpeed *= 0.4; } 
-                else { currentSpeed *= 2.2; } 
-            } else if (variableSpeedType === 3) {
-                currentSpeed *= 0.4; 
-            }
-
+            let currentSpeed = getActualSpeed();
             parryRadius -= currentSpeed;
             
             let currentToleranceLate = Math.max(30, currentSpeed * 3);
@@ -663,48 +710,7 @@
             }
         }
 
-        parryCanvas.addEventListener('pointerdown', (e) => {
-            if (e.button === 1) return; 
-            e.preventDefault();
-            if (!isEnemyAttacking) return;
-            if (!isValidClick(e)) return;
-
-            const rect = parryCanvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            const dist = Math.hypot(clickX - targetX, clickY - targetY);
-            
-            let currentSpeed = parryShrinkSpeed;
-            if (variableSpeedType === 1) {
-                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
-                if (progress < 0.5) currentSpeed *= 1.8; else if (progress < 0.8) currentSpeed *= 0.15; else currentSpeed *= 1.8;
-            } else if (variableSpeedType === 2) {
-                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
-                if (progress < 0.6) currentSpeed *= 0.4; else currentSpeed *= 2.2;
-            } else if (variableSpeedType === 3) {
-                currentSpeed *= 0.4;
-            }
-            
-            let currentToleranceEarly = Math.max(80, currentSpeed * 7);
-            let currentToleranceLate = Math.max(30, currentSpeed * 3);
-
-            if (dist <= targetRadius + 120) {
-                if (isFakeParry) {
-                    failFakeParry();
-                } else {
-                    let diff = parryRadius - targetRadius;
-                    if (diff > currentToleranceEarly) {
-                        executeAttack(e.clientX, e.clientY);
-                    } else if (diff >= -currentToleranceLate) {
-                        successParry(e); 
-                    }
-                }
-            } else {
-                executeAttack(e.clientX, e.clientY);
-            }
-        });
-
-        function successParry(e) {
+        function successParry() {
             cancelAnimationFrame(parryAnimationId); triggerShake('heavy'); triggerFlash(0.1); showMessage("PERFECT", "#00e676");
             addVfx(targetX + parryCanvas.getBoundingClientRect().left, targetY + parryCanvas.getBoundingClientRect().top, 'parry');
             

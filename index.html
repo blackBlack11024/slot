@@ -647,7 +647,37 @@
             }
             endEnemyAttack();
         }
-
+        // 新增：全域往下滑動 (Swipe/Drag Down) 觸發拉霸
+        let swipeStartY = 0;
+        let swipeStartX = 0;
+        let isTrackingSwipe = false;
+        
+        window.addEventListener('pointerdown', (e) => {
+            // 記錄按下去的起始座標
+            swipeStartX = e.clientX;
+            swipeStartY = e.clientY;
+            isTrackingSwipe = true;
+        });
+        
+        window.addEventListener('pointermove', (e) => {
+            if (!isTrackingSwipe || isSpinning) return;
+            
+            let deltaY = e.clientY - swipeStartY;
+            let deltaX = Math.abs(e.clientX - swipeStartX);
+        
+            // 條件：往下移動超過 50px，且垂直移動距離大於水平移動 (避免左右滑動誤觸)
+            if (deltaY > 50 && deltaY > deltaX) {
+                spinSlot();
+                isTrackingSwipe = false; // 觸發後立刻關閉追蹤，避免一次滑動觸發好幾次
+            }
+        });
+        
+        window.addEventListener('pointerup', () => {
+            isTrackingSwipe = false;
+        });
+        window.addEventListener('pointercancel', () => {
+            isTrackingSwipe = false;
+        });
         function failParry() {
             cancelAnimationFrame(parryAnimationId);
             if (isInvincible) { triggerShake('light'); hitStop(50); showMessage("無敵擋下", "#ffb300"); addVfx(targetX + parryCanvas.getBoundingClientRect().left, targetY + parryCanvas.getBoundingClientRect().top, 'shield'); endEnemyAttack(); return; }

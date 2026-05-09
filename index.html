@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>打擊霸</title>
+    <title>拉霸與格擋</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -22,11 +22,28 @@
             height: 100%; width: 100%; position: relative;
         }
 
+        /* 警告畫面 */
+        #epilepsy-warning {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050505; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000;
+            text-align: center; padding: 20px;
+        }
+        .warning-title { color: #ff1744; font-size: 36px; font-weight: 900; margin-bottom: 30px; letter-spacing: 2px; }
+        .warning-text { font-size: 20px; line-height: 2; color: #ccc; margin-bottom: 50px; font-weight: bold; letter-spacing: 1px; }
+        .warning-btn {
+            background: #222; border: 3px solid #444; color: #fff; padding: 15px 40px;
+            font-size: 24px; font-weight: 900; cursor: pointer; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8); transition: background 0.1s;
+        }
+        .warning-btn:active { background: #444; transform: translateY(2px); box-shadow: 0 2px 5px rgba(0,0,0,0.8); }
+
         .hit-stop { transform: scale(1.02); }
 
-        @keyframes shake-micro { 0% {transform: translate(0px, 3px)} 50% {transform: translate(0px, -3px)} 100% {transform: translate(0px, 0px)} }
-        @keyframes shake-light { 0% { transform: translate(5px, 5px) } 25% { transform: translate(-4px, -3px) } 50% { transform: translate(3px, 6px) } 75% { transform: translate(-3px, 3px) } 100% { transform: translate(0px, 0px) } }
-        @keyframes shake-heavy { 0% { transform: translate(10px, 10px) rotate(2deg); } 25% { transform: translate(-12px, -8px) rotate(-2deg); } 50% { transform: translate(8px, 14px) rotate(3deg); } 75% { transform: translate(-14px, 6px) rotate(-3deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
+        /* 減弱晃動幅度 */
+        @keyframes shake-micro { 0% {transform: translate(0px, 2px)} 50% {transform: translate(0px, -2px)} 100% {transform: translate(0px, 0px)} }
+        @keyframes shake-light { 0% { transform: translate(3px, 3px) } 25% { transform: translate(-2px, -2px) } 50% { transform: translate(2px, 4px) } 75% { transform: translate(-2px, 2px) } 100% { transform: translate(0px, 0px) } }
+        @keyframes shake-heavy { 0% { transform: translate(6px, 6px) rotate(1deg); } 25% { transform: translate(-8px, -4px) rotate(-1deg); } 50% { transform: translate(4px, 10px) rotate(2deg); } 75% { transform: translate(-10px, 4px) rotate(-2deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
         .shake-micro { animation: shake-micro 0.1s ease-out; }
         .shake-light { animation: shake-light 0.15s ease-out; }
         .shake-heavy { animation: shake-heavy 0.3s ease-out; }
@@ -191,10 +208,8 @@
         let parryRadius = 0; 
         let parryStartRadius = 0;
         const targetRadius = 60; 
-        
         const toleranceEarly = 50; 
         const toleranceLate = 20;  
-        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -206,6 +221,12 @@
         let isInvincible = false;
 
         let variableSpeedType = 0; 
+
+        // 防連點器變數
+        let lastClickTime = 0;
+        let samePixelCount = 0;
+        let lastClickX = -1;
+        let lastClickY = -1;
 
         const warningScreen = document.getElementById('epilepsy-warning');
         const startBtn = document.getElementById('start-btn');
@@ -239,8 +260,7 @@
             warningScreen.style.display = 'none';
             container.style.display = 'flex';
             resizeCanvas();
-            updateUI('player', false); 
-            updateUI('enemy', false); 
+            // 修復警告介面壞掉的問題 確保點擊後才啟動遊戲迴圈
             scheduleNextEnemyAttack();
         });
 
@@ -332,6 +352,22 @@
             requestAnimationFrame(updateVfx);
         }
         updateVfx();
+
+        // --- 防連點器機制 ---
+        function isValidClick(e) {
+            let now = Date.now();
+            if (now - lastClickTime < 35) return false; 
+            if (e.clientX === lastClickX && e.clientY === lastClickY) {
+                samePixelCount++;
+                if (samePixelCount > 4) return false; 
+            } else {
+                samePixelCount = 0;
+            }
+            lastClickX = e.clientX;
+            lastClickY = e.clientY;
+            lastClickTime = now;
+            return true;
+        }
 
         let isSpinning = false;
         
@@ -519,6 +555,7 @@
         battleArea.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             if (e.target === parryCanvas) return;
+            if (!isValidClick(e)) return;
             executeAttack(e.clientX, e.clientY);
         });
 
@@ -536,7 +573,8 @@
             parryStartRadius = Math.max(rect.width, rect.height) * 1.2;
             parryRadius = parryStartRadius;
             
-            let speedFactor = Math.max(45, 120 - (currentKills * 5));
+            // 將一般光圈速度調快
+            let speedFactor = Math.max(20, 80 - (currentKills * 6));
             parryShrinkSpeed = (parryRadius - targetRadius) / speedFactor; 
             
             if (currentKills >= 5 && Math.random() < 0.2) {
@@ -601,6 +639,7 @@
         parryCanvas.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             if (!isEnemyAttacking) return;
+            if (!isValidClick(e)) return;
 
             const rect = parryCanvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left;

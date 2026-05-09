@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>拉機霸</title>
+    <title>拉霸與格擋</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -39,7 +39,6 @@
 
         .hit-stop { transform: scale(1.02); }
 
-        /* 大幅削減晃動幅度 保持畫面清晰 */
         @keyframes shake-micro { 0% {transform: translate(0px, 1px)} 50% {transform: translate(0px, -1px)} 100% {transform: translate(0px, 0px)} }
         @keyframes shake-light { 0% { transform: translate(2px, 2px) } 25% { transform: translate(-1px, -1px) } 50% { transform: translate(1px, 2px) } 75% { transform: translate(-1px, 1px) } 100% { transform: translate(0px, 0px) } }
         @keyframes shake-heavy { 0% { transform: translate(4px, 4px) } 25% { transform: translate(-3px, -2px) } 50% { transform: translate(3px, 5px) } 75% { transform: translate(-4px, 2px) } 100% { transform: translate(0px, 0px) } }
@@ -101,7 +100,7 @@
         #slot-machine-container:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.8); border-bottom-width: 2px; margin-bottom: 2px; }
         
         .slots {
-            display: flex; gap: 4px; margin-bottom: 4px;
+            display: flex; gap: 4px;
             background: #0a0a0a; padding: 4px; border-radius: 4px;
             border: 2px solid #111; border-top: 2px solid #000; border-bottom: 2px solid #333;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.9); overflow: hidden;
@@ -122,11 +121,7 @@
         @keyframes tension-shake { 0% { transform: translateY(-2px) scaleY(1.3); } 50% { transform: translateY(2px) scaleY(1.3); } 100% { transform: translateY(-2px) scaleY(1.3); } }
         .slot-item.tension { animation: tension-shake 0.05s infinite; filter: blur(1px) brightness(0.8); color: #fff; background: #d50000; border-color: #ff1744; text-shadow: 0 0 10px #000; }
 
-        .slot-info { color: #ffb300; font-weight: 900; font-size: 10px; text-shadow: 0 1px 2px #000; text-align: center; width: 100%; background: #111; padding: 2px; border-radius: 2px; border: 1px solid #000; }
-        .slot-info.highlight { color: #ff1744; background: #3a0000; }
-        .slot-chain-text { color: #00e5ff; font-size: 9px; margin-top: 2px; opacity: 0; font-weight: 900; text-shadow: 0 1px 2px #000; }
-
-        #buff-bar-container { width: 100%; height: 4px; background: #000; border-radius: 2px; overflow: hidden; margin-top: 2px; opacity: 0; border: 1px solid #222; }
+        #buff-bar-container { width: 100%; height: 6px; background: #000; border-radius: 3px; overflow: hidden; margin-top: 6px; opacity: 0; border: 1px solid #222; }
         #buff-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ffb300, #ff5252); }
 
         #battle-area { flex-grow: 1; width: 100%; position: relative; display: flex; justify-content: center; align-items: center; cursor: crosshair; }
@@ -173,19 +168,18 @@
                 </div>
             </div>
 
-            <div id="slot-machine-container" id="slot-btn">
+            <!-- 極簡化拉霸機：只有滾輪和時間條 -->
+            <div id="slot-machine-container">
                 <div class="slots">
                     <div class="slot-item" id="slot1">C</div>
                     <div class="slot-item" id="slot2">C</div>
                     <div class="slot-item" id="slot3">C</div>
                 </div>
-                <div class="slot-info" id="slot-status">點擊啟動</div>
-                <div class="slot-chain-text" id="slot-chain">連莊提升</div>
                 <div id="buff-bar-container"><div id="buff-bar-fill"></div></div>
             </div>
         </div>
 
-        <div id="battle-area" id="battle-btn">
+        <div id="battle-area">
             <div class="hint-text">點擊攻擊</div>
             <canvas id="parry-canvas"></canvas>
         </div>
@@ -212,9 +206,6 @@
         let parryStartRadius = 0;
         const targetRadius = 60; 
         
-        const toleranceEarly = 100; 
-        const toleranceLate = 25;  
-        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -239,8 +230,6 @@
         const enemyHpBox = document.getElementById('enemy-hp-box');
         const playerHpFill = document.getElementById('player-hp-fill');
         const enemyHpFill = document.getElementById('enemy-hp-fill');
-        const slotStatus = document.getElementById('slot-status');
-        const slotChainText = document.getElementById('slot-chain');
         const buffContainer = document.getElementById('buff-bar-container');
         const buffFill = document.getElementById('buff-bar-fill');
         const slots = [document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3')];
@@ -278,7 +267,6 @@
             setTimeout(() => { msgDiv.innerText = ""; }, 800);
         }
 
-        // 修改後的分級震動
         function triggerShake(intensity = 'light') { 
             container.classList.remove('shake-micro', 'shake-light', 'shake-heavy', 'shake-insane'); 
             void container.offsetWidth; 
@@ -452,8 +440,6 @@
         function spinSlot() {
             if (isSpinning) return;
             isSpinning = true;
-            slotStatus.innerText = "運轉中";
-            slotStatus.classList.remove('highlight');
             slots.forEach(s => { s.classList.remove('locked', 'tension'); s.classList.add('spinning'); });
 
             let resultSymbols = [];
@@ -482,8 +468,6 @@
                 if (isTension) { 
                     tensionDelay = 2000; 
                     slots[2].classList.remove('spinning'); slots[2].classList.add('tension'); 
-                    slotStatus.innerText = "聽牌 準備爆發"; 
-                    slotStatus.classList.add('highlight'); 
                 }
                 setTimeout(() => {
                     spinState[2] = false; slots[2].innerText = resultSymbols[2]; slots[2].classList.remove('spinning', 'tension'); slots[2].classList.add('locked');
@@ -493,7 +477,6 @@
         }
 
         function calcSlot(s1, s2, s3) {
-            slotStatus.classList.remove('highlight');
             let isJackpot = false;
             let newMultiplier = 1;
             
@@ -525,25 +508,21 @@
                 currentMultiplier = newMultiplier;
                 if (isJackpot) { 
                     jackpotBonusChance = Math.min(jackpotBonusChance + 0.65, 0.85); 
-                    slotChainText.innerText = "連莊機率 " + Math.round(jackpotBonusChance * 100) + " 趴"; 
-                    slotChainText.style.opacity = '1';
                     isInvincible = true;
                     playerHpBox.classList.add('invincible');
                 } else { 
                     jackpotBonusChance = 0; 
-                    slotChainText.style.opacity = '0';
                     isInvincible = false;
                     playerHpBox.classList.remove('invincible');
                 }
-                slotStatus.innerText = "倍率 x " + currentMultiplier;
+                
                 if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
+
             } else {
-                jackpotBonusChance = 0; slotChainText.style.opacity = '0';
-                if (buffEndTime > Date.now()) {
-                    slotStatus.innerText = "未連莊 維持 x " + currentMultiplier;
-                } else {
+                jackpotBonusChance = 0; 
+                if (buffEndTime <= Date.now()) {
                     currentMultiplier = 1; isInvincible = false; playerHpBox.classList.remove('invincible');
-                    slotStatus.innerText = "未中獎 點擊重啟"; clearBuffTimer();
+                    clearBuffTimer();
                 }
             }
         }
@@ -555,8 +534,7 @@
                 if (remaining <= 0) { 
                     clearInterval(buffInterval); currentMultiplier = 1; jackpotBonusChance = 0; 
                     isInvincible = false; playerHpBox.classList.remove('invincible');
-                    buffContainer.style.opacity = '0'; slotChainText.style.opacity = '0'; 
-                    if (!isSpinning) slotStatus.innerText = "加成結束 點擊重啟"; 
+                    buffContainer.style.opacity = '0'; 
                     triggerShake('light'); 
                 } else {
                     let percent = (remaining / duration) * 100; buffFill.style.width = percent + '%';
@@ -591,11 +569,9 @@
             addVfx(clientX, clientY, 'hit');
             addDamageNumber(clientX, clientY, totalDamage, currentMultiplier);
             
-            // 修正：針對不同傷害給予不同震動等級與頓幀
             if (currentMultiplier >= 10) { 
                 triggerShake('insane'); triggerFlash(0.15); hitStop(80); 
             } else if (currentMultiplier >= 5) { 
-                // 50 傷害：降低震動但保留頓幀
                 triggerShake('heavy'); triggerFlash(0.08); hitStop(50); 
             } else { 
                 triggerShake('light'); hitStop(30); 

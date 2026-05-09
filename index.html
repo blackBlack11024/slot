@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>拉霸與格擋</title>
+    <title>打機霸</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -22,7 +22,6 @@
             height: 100%; width: 100%; position: relative;
         }
 
-        /* 警告畫面 */
         #epilepsy-warning {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #050505; display: flex; flex-direction: column;
@@ -207,8 +206,7 @@
         let parryRadius = 0; 
         let parryStartRadius = 0;
         const targetRadius = 60; 
-        const toleranceEarly = 100; 
-        const toleranceLate = 25;  
+        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -374,13 +372,12 @@
             spinSlot();
         });
 
-        // 支援滑鼠中鍵拉霸 綁定在整個畫面上
-        window.addEventListener('pointerdown', (e) => {
-            if (e.button === 1) { 
-                e.preventDefault();
+        // 支援畫面上任何地方滾動滾輪觸發拉霸
+        window.addEventListener('wheel', (e) => {
+            if (!isSpinning) {
                 spinSlot();
             }
-        });
+        }, { passive: true });
 
         function spinSlot() {
             if (isSpinning) return;
@@ -559,7 +556,6 @@
         }
 
         battleArea.addEventListener('pointerdown', (e) => {
-            if (e.button === 1) return; // 忽略中鍵的攻擊觸發
             e.preventDefault();
             if (e.target === parryCanvas) return;
             if (!isValidClick(e)) return;
@@ -573,11 +569,12 @@
             const rect = battleArea.getBoundingClientRect();
             parryCanvas.width = rect.width; parryCanvas.height = rect.height;
             
+            // 縮小最高生成距離 解決大螢幕速度過快的問題
             const padding = targetRadius + 80;
             targetX = padding + Math.random() * (rect.width - padding * 2);
             targetY = padding + Math.random() * (rect.height - padding * 2);
             
-            parryStartRadius = Math.max(rect.width, rect.height) * 1.2;
+            parryStartRadius = Math.max(rect.width, rect.height) * 0.8;
             parryRadius = parryStartRadius;
             
             let speedFactor = Math.max(45, 120 - (currentKills * 5));
@@ -635,7 +632,11 @@
 
             parryRadius -= currentSpeed;
             
-            if (parryRadius < targetRadius - toleranceLate) {
+            // 動態判定時間：依據速度給予絕對安全的幀數容錯
+            let currentToleranceEarly = Math.max(150, currentSpeed * 10);
+            let currentToleranceLate = Math.max(40, currentSpeed * 3);
+
+            if (parryRadius < targetRadius - currentToleranceLate) {
                 failParry();
             } else {
                 parryAnimationId = requestAnimationFrame(drawParry);
@@ -643,7 +644,6 @@
         }
 
         parryCanvas.addEventListener('pointerdown', (e) => {
-            if (e.button === 1) return; // 忽略中鍵
             e.preventDefault();
             if (!isEnemyAttacking) return;
             if (!isValidClick(e)) return;
@@ -652,12 +652,26 @@
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
             const dist = Math.hypot(clickX - targetX, clickY - targetY);
+            
+            let currentSpeed = parryShrinkSpeed;
+            if (variableSpeedType === 1) {
+                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
+                if (progress < 0.5) currentSpeed *= 1.8; else if (progress < 0.8) currentSpeed *= 0.15; else currentSpeed *= 1.8;
+            } else if (variableSpeedType === 2) {
+                let progress = (parryStartRadius - parryRadius) / (parryStartRadius - targetRadius);
+                if (progress < 0.6) currentSpeed *= 0.4; else currentSpeed *= 2.2;
+            } else if (variableSpeedType === 3) {
+                currentSpeed *= 0.4;
+            }
+            
+            let currentToleranceEarly = Math.max(150, currentSpeed * 10);
+            let currentToleranceLate = Math.max(40, currentSpeed * 3);
 
             if (dist <= targetRadius + 120) {
                 let diff = parryRadius - targetRadius;
-                if (diff > toleranceEarly) {
+                if (diff > currentToleranceEarly) {
                     executeAttack(e.clientX, e.clientY);
-                } else if (diff >= -toleranceLate) {
+                } else if (diff >= -currentToleranceLate) {
                     successParry(e); 
                 }
             } else {

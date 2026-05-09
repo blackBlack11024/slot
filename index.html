@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>拉霸與格擋</title>
+    <title>打擊拉霸</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -207,7 +207,10 @@
         let parryRadius = 0; 
         let parryStartRadius = 0;
         const targetRadius = 60; 
-        const tolerance = 30; 
+        
+        // 判定時間放寬
+        const tolerance = 50; 
+        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -429,7 +432,7 @@
                 currentMultiplier = newMultiplier;
                 
                 if (isJackpot) { 
-                    jackpotBonusChance = Math.min(jackpotBonusChance + 0.40, 0.85); 
+                    jackpotBonusChance = Math.min(jackpotBonusChance + 0.65, 0.85); 
                     slotChainText.innerText = "連莊機率 " + Math.round(jackpotBonusChance * 100) + " 趴"; 
                     slotChainText.style.opacity = '1';
                     isInvincible = true;
@@ -441,7 +444,7 @@
                     playerHpBox.classList.remove('invincible');
                 }
                 
-                slotStatus.innerText = "倍率 " + currentMultiplier;
+                slotStatus.innerText = "倍率 x " + currentMultiplier;
                 if (currentMultiplier > 1) { startBuffTimer(8000); } else { clearBuffTimer(); }
 
             } else {
@@ -449,7 +452,7 @@
                 slotChainText.style.opacity = '0';
                 
                 if (buffEndTime > Date.now()) {
-                    slotStatus.innerText = "未連莊 維持 " + currentMultiplier;
+                    slotStatus.innerText = "未連莊 維持 x " + currentMultiplier;
                 } else {
                     currentMultiplier = 1;
                     isInvincible = false;
@@ -615,7 +618,8 @@
             const clickY = e.clientY - rect.top;
             const dist = Math.hypot(clickX - targetX, clickY - targetY);
 
-            if (dist <= targetRadius + 40) {
+            // 空間判定：擴大有效點擊區域
+            if (dist <= targetRadius + 80) {
                 let diff = parryRadius - targetRadius;
                 if (diff > tolerance) {
                     executeAttack(e.clientX, e.clientY);

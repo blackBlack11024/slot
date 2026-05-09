@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>打擊霸</title>
+    <title>拉霸與格擋</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -22,6 +22,7 @@
             height: 100%; width: 100%; position: relative;
         }
 
+        /* 警告畫面 */
         #epilepsy-warning {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #050505; display: flex; flex-direction: column;
@@ -206,10 +207,8 @@
         let parryRadius = 0; 
         let parryStartRadius = 0;
         const targetRadius = 60; 
-        
         const toleranceEarly = 100; 
         const toleranceLate = 25;  
-        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -373,6 +372,14 @@
         slotBtn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             spinSlot();
+        });
+
+        // 支援滑鼠中鍵拉霸 綁定在整個畫面上
+        window.addEventListener('pointerdown', (e) => {
+            if (e.button === 1) { 
+                e.preventDefault();
+                spinSlot();
+            }
         });
 
         function spinSlot() {
@@ -552,6 +559,7 @@
         }
 
         battleArea.addEventListener('pointerdown', (e) => {
+            if (e.button === 1) return; // 忽略中鍵的攻擊觸發
             e.preventDefault();
             if (e.target === parryCanvas) return;
             if (!isValidClick(e)) return;
@@ -635,6 +643,7 @@
         }
 
         parryCanvas.addEventListener('pointerdown', (e) => {
+            if (e.button === 1) return; // 忽略中鍵
             e.preventDefault();
             if (!isEnemyAttacking) return;
             if (!isValidClick(e)) return;

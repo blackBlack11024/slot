@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>拉霸與格擋</title>
+    <title>打擊霸</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -22,7 +22,6 @@
             height: 100%; width: 100%; position: relative;
         }
 
-        /* 警告畫面 */
         #epilepsy-warning {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #050505; display: flex; flex-direction: column;
@@ -40,7 +39,6 @@
 
         .hit-stop { transform: scale(1.02); }
 
-        /* 減弱晃動幅度 */
         @keyframes shake-micro { 0% {transform: translate(0px, 2px)} 50% {transform: translate(0px, -2px)} 100% {transform: translate(0px, 0px)} }
         @keyframes shake-light { 0% { transform: translate(3px, 3px) } 25% { transform: translate(-2px, -2px) } 50% { transform: translate(2px, 4px) } 75% { transform: translate(-2px, 2px) } 100% { transform: translate(0px, 0px) } }
         @keyframes shake-heavy { 0% { transform: translate(6px, 6px) rotate(1deg); } 25% { transform: translate(-8px, -4px) rotate(-1deg); } 50% { transform: translate(4px, 10px) rotate(2deg); } 75% { transform: translate(-10px, 4px) rotate(-2deg); } 100% { transform: translate(0px, 0px) rotate(0deg); } }
@@ -208,8 +206,10 @@
         let parryRadius = 0; 
         let parryStartRadius = 0;
         const targetRadius = 60; 
-        const toleranceEarly = 50; 
-        const toleranceLate = 20;  
+        
+        const toleranceEarly = 100; 
+        const toleranceLate = 25;  
+        
         let parryShrinkSpeed = 5; 
         let parryAnimationId;
         
@@ -222,7 +222,6 @@
 
         let variableSpeedType = 0; 
 
-        // 防連點器變數
         let lastClickTime = 0;
         let samePixelCount = 0;
         let lastClickX = -1;
@@ -260,7 +259,8 @@
             warningScreen.style.display = 'none';
             container.style.display = 'flex';
             resizeCanvas();
-            // 修復警告介面壞掉的問題 確保點擊後才啟動遊戲迴圈
+            updateUI('player', false); 
+            updateUI('enemy', false); 
             scheduleNextEnemyAttack();
         });
 
@@ -353,7 +353,6 @@
         }
         updateVfx();
 
-        // --- 防連點器機制 ---
         function isValidClick(e) {
             let now = Date.now();
             if (now - lastClickTime < 35) return false; 
@@ -566,15 +565,14 @@
             const rect = battleArea.getBoundingClientRect();
             parryCanvas.width = rect.width; parryCanvas.height = rect.height;
             
-            const padding = targetRadius + 20;
+            const padding = targetRadius + 80;
             targetX = padding + Math.random() * (rect.width - padding * 2);
             targetY = padding + Math.random() * (rect.height - padding * 2);
             
             parryStartRadius = Math.max(rect.width, rect.height) * 1.2;
             parryRadius = parryStartRadius;
             
-            // 將一般光圈速度調快
-            let speedFactor = Math.max(20, 80 - (currentKills * 6));
+            let speedFactor = Math.max(45, 120 - (currentKills * 5));
             parryShrinkSpeed = (parryRadius - targetRadius) / speedFactor; 
             
             if (currentKills >= 5 && Math.random() < 0.2) {
@@ -646,7 +644,7 @@
             const clickY = e.clientY - rect.top;
             const dist = Math.hypot(clickX - targetX, clickY - targetY);
 
-            if (dist <= targetRadius + 80) {
+            if (dist <= targetRadius + 120) {
                 let diff = parryRadius - targetRadius;
                 if (diff > toleranceEarly) {
                     executeAttack(e.clientX, e.clientY);
